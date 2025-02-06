@@ -1,3 +1,4 @@
+
 import { NextResponse } from "next/server";
 
 // In-memory database to store timetable entries
@@ -5,6 +6,8 @@ let timetableData = [];
 
 // GET: Retrieve all timetable entries
 export async function GET() {
+  // (For now, simply return the stored events.
+  // You could later generate recurring event occurrences here.)
   return NextResponse.json({ data: timetableData });
 }
 
@@ -24,14 +27,18 @@ export async function POST(req) {
       return NextResponse.json({ error: "All fields are required!" }, { status: 400 });
     }
 
+    // Determine if the event is recurring; default to false if not provided
+    const recurring = newEntry.recurring === true;
+
     // Create an entry with a unique ID
     const entryWithId = {
       id: timetableData.length + 1,
       course: newEntry.course,
       lecturer: newEntry.lecturer,
       room: newEntry.room,
-      date: newEntry.date, // Expected to be in "DD/MM/YYYY" format (provided by the frontend)
-      time: newEntry.time, // Expected to be in "HH:mm AM/PM" format (provided by the frontend)
+      date: newEntry.date, // Expected format: "DD/MM/YYYY"
+      time: newEntry.time, // Expected format: "HH:mm AM/PM"
+      recurring,
     };
 
     timetableData.push(entryWithId);
