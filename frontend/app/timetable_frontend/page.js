@@ -18,6 +18,8 @@ import {
   TableBody,
   TableContainer,
   Paper,
+  FormControlLabel,
+  Checkbox,
 } from "@mui/material";
 import Link from "next/link";
 
@@ -26,12 +28,15 @@ import { DatePicker, TimePicker } from "@mui/x-date-pickers";
 import { AdapterDateFns } from "@mui/x-date-pickers/AdapterDateFns";
 import { LocalizationProvider } from "@mui/x-date-pickers/LocalizationProvider";
 
-// Import FullCalendar and its plugins
+// Import FullCalendar and required plugins
 import FullCalendar from "@fullcalendar/react";
 import dayGridPlugin from "@fullcalendar/daygrid";
 import timeGridPlugin from "@fullcalendar/timegrid";
 import listPlugin from "@fullcalendar/list";
 import interactionPlugin from "@fullcalendar/interaction";
+
+// Import addDays from date-fns for recurring event calculations
+import { addDays } from "date-fns";
 
 // Helper function to convert "HH:mm AM/PM" to 24-hour "HH:mm" format
 const convertTimeTo24Hour = (timeStr) => {
@@ -60,17 +65,18 @@ const Navbar = () => (
 );
 
 export default function TimetableFrontend() {
-  // newEntry stores date and time as Date objects (initially null)
+  // newEntry: stores new schedule details; date and time are Date objects; recurring is a boolean
   const [newEntry, setNewEntry] = useState({
     course: "",
     lecturer: "",
     room: "",
     date: null,
     time: null,
+    recurring: false,
   });
   const [timetable, setTimetable] = useState([]);
   const [loading, setLoading] = useState(true);
-  // viewMode toggles between "table" and "calendar"
+  // viewMode: "table" or "calendar"
   const [viewMode, setViewMode] = useState("table");
 
   useEffect(() => {
@@ -100,9 +106,9 @@ export default function TimetableFrontend() {
       return;
     }
 
-    // Format the date to "DD/MM/YYYY"
+    // Format date to "DD/MM/YYYY"
     const formattedDate = newEntry.date.toLocaleDateString("en-GB");
-    // Format the time to "HH:mm AM/PM"
+    // Format time to "HH:mm AM/PM"
     const formattedTime = newEntry.time.toLocaleTimeString([], {
       hour: "2-digit",
       minute: "2-digit",
@@ -124,26 +130,45 @@ export default function TimetableFrontend() {
         body: JSON.stringify(updatedEntry),
       });
       await res.json();
-      setNewEntry({ course: "", lecturer: "", room: "", date: null, time: null });
+      setNewEntry({ course: "", lecturer: "", room: "", date: null, time: null, recurring: false });
       fetchTimetable();
     } catch (error) {
       console.error("Error adding entry:", error);
     }
   };
 
-  // Prepare calendar events: convert stored date ("DD/MM/YYYY") to ISO date,
-  // convert time to 24-hour format, and build an ISO datetime string.
-  const calendarEvents = timetable.map((entry) => {
+  // Build calendar events, generating additional occurrences for recurring events
+  const calendarEvents = [];
+  timetable.forEach((entry) => {
+    // Parse the stored date "DD/MM/YYYY"
     const parts = entry.date.split("/");
-    const isoDate = `${parts[2]}-${parts[1].padStart(2, "0")}-${parts[0].padStart(2, "0")}`;
+    const baseDate = new Date(`${parts[2]}-${parts[1].padStart(2, "0")}-${parts[0].padStart(2, "0")}`);
+    // Convert time from "HH:mm AM/PM" to 24-hour format
     const time24 = convertTimeTo24Hour(entry.time);
+    // Build ISO datetime for the base event
+    const isoDate = baseDate.toISOString().split("T")[0]; // "YYYY-MM-DD"
     const isoDatetime = isoDate + "T" + time24;
-    return {
+    // Add the base event
+    calendarEvents.push({
       id: entry.id.toString(),
       title: `${entry.course} (${entry.lecturer})`,
       start: new Date(isoDatetime),
-      extendedProps: { room: entry.room },
-    };
+      extendedProps: { room: entry.room, recurring: entry.recurring },
+    });
+    // If recurring, generate occurrences for the next 4 weeks
+    if (entry.recurring) {
+      for (let i = 1; i <= 4; i++) {
+        const nextDate = addDays(baseDate, 7 * i);
+        const nextIsoDate = nextDate.toISOString().split("T")[0];
+        const nextIsoDatetime = nextIsoDate + "T" + time24;
+        calendarEvents.push({
+          id: `${entry.id}-${i}`,
+          title: `${entry.course} (${entry.lecturer})`,
+          start: new Date(nextIsoDatetime),
+          extendedProps: { room: entry.room, recurring: entry.recurring },
+        });
+      }
+    }
   });
 
   return (
@@ -236,6 +261,19 @@ export default function TimetableFrontend() {
                 />
               </LocalizationProvider>
             </Grid>
+            <Grid item xs={12}>
+              <FormControlLabel
+                control={
+                  <Checkbox
+                    checked={newEntry.recurring}
+                    onChange={(e) =>
+                      setNewEntry({ ...newEntry, recurring: e.target.checked })
+                    }
+                  />
+                }
+                label="Recurring Weekly"
+              />
+            </Grid>
           </Grid>
           <Button
             variant="contained"
@@ -255,12 +293,27 @@ export default function TimetableFrontend() {
               <Table>
                 <TableHead sx={{ backgroundColor: "#1976D2" }}>
                   <TableRow>
-                    <TableCell sx={{ color: "white", fontWeight: "bold" }}>ID</TableCell>
-                    <TableCell sx={{ color: "white", fontWeight: "bold" }}>Course</TableCell>
-                    <TableCell sx={{ color: "white", fontWeight: "bold" }}>Lecturer</TableCell>
-                    <TableCell sx={{ color: "white", fontWeight: "bold" }}>Room</TableCell>
-                    <TableCell sx={{ color: "white", fontWeight: "bold" }}>Date</TableCell>
-                    <TableCell sx={{ color: "white", fontWeight: "bold" }}>Time</TableCell>
+                    <TableCell sx={{ color: "white", fontWeight: "bold" }}>
+                      ID
+                    </TableCell>
+                    <TableCell sx={{ color: "white", fontWeight: "bold" }}>
+                      Course
+                    </TableCell>
+                    <TableCell sx={{ color: "white", fontWeight: "bold" }}>
+                      Lecturer
+                    </TableCell>
+                    <TableCell sx={{ color: "white", fontWeight: "bold" }}>
+                      Room
+                    </TableCell>
+                    <TableCell sx={{ color: "white", fontWeight: "bold" }}>
+                      Date
+                    </TableCell>
+                    <TableCell sx={{ color: "white", fontWeight: "bold" }}>
+                      Time
+                    </TableCell>
+                    <TableCell sx={{ color: "white", fontWeight: "bold" }}>
+                      Recurring
+                    </TableCell>
                   </TableRow>
                 </TableHead>
                 <TableBody>
@@ -272,6 +325,7 @@ export default function TimetableFrontend() {
                       <TableCell>{entry.room}</TableCell>
                       <TableCell>{entry.date}</TableCell>
                       <TableCell>{entry.time}</TableCell>
+                      <TableCell>{entry.recurring ? "Yes" : "No"}</TableCell>
                     </TableRow>
                   ))}
                 </TableBody>
