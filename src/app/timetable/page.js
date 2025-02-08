@@ -16,7 +16,7 @@ import {
   FormControl,
   InputLabel,
 } from "@mui/material";
-import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { DatePicker, TimePicker } from "@mui/x-date-pickers";
 import { AdapterDateFns } from "@mui/x-date-pickers/AdapterDateFns";
 import { LocalizationProvider } from "@mui/x-date-pickers/LocalizationProvider";
@@ -26,18 +26,23 @@ import timeGridPlugin from "@fullcalendar/timegrid";
 import listPlugin from "@fullcalendar/list";
 import interactionPlugin from "@fullcalendar/interaction";
 
-const Navbar = () => (
-  <AppBar position="static" sx={{ backgroundColor: "#1565C0" }}>
-    <Toolbar>
-      <Typography variant="h6" sx={{ flexGrow: 1 }}>
-        University Timetable
-      </Typography>
-      <Link href="/" passHref>
-        <Button color="inherit">Home</Button>
-      </Link>
-    </Toolbar>
-  </AppBar>
-);
+// ✅ Updated Navbar with working Home button redirect
+const Navbar = () => {
+  const router = useRouter();
+
+  return (
+    <AppBar position="static" sx={{ backgroundColor: "#1565C0" }}>
+      <Toolbar>
+        <Typography variant="h6" sx={{ flexGrow: 1 }}>
+          University Timetable
+        </Typography>
+        <Button color="inherit" onClick={() => router.push("/dashboard")}>
+          Home
+        </Button>
+      </Toolbar>
+    </AppBar>
+  );
+};
 
 export default function Timetable() {
   const [newEntry, setNewEntry] = useState({
@@ -239,30 +244,6 @@ export default function Timetable() {
                   <MenuItem value="biweekly">Biweekly</MenuItem>
                 </Select>
               </FormControl>
-            </Grid>
-            <Grid item xs={12} md={4}>
-              <LocalizationProvider dateAdapter={AdapterDateFns}>
-                <DatePicker
-                  label="Select Date"
-                  value={newEntry.date}
-                  onChange={(newDate) =>
-                    setNewEntry({ ...newEntry, date: newDate })
-                  }
-                  renderInput={(params) => <TextField {...params} fullWidth />}
-                />
-              </LocalizationProvider>
-            </Grid>
-            <Grid item xs={12} md={4}>
-              <LocalizationProvider dateAdapter={AdapterDateFns}>
-                <TimePicker
-                  label="Select Time"
-                  value={newEntry.time}
-                  onChange={(newTime) =>
-                    setNewEntry({ ...newEntry, time: newTime })
-                  }
-                  renderInput={(params) => <TextField {...params} fullWidth />}
-                />
-              </LocalizationProvider>
             </Grid>
           </Grid>
 
