@@ -26,7 +26,7 @@ import timeGridPlugin from "@fullcalendar/timegrid";
 import listPlugin from "@fullcalendar/list";
 import interactionPlugin from "@fullcalendar/interaction";
 
-// ✅ Updated Navbar with working Home button redirect
+// Navbar component with Home button redirect
 const Navbar = () => {
   const router = useRouter();
 
@@ -65,12 +65,14 @@ export default function Timetable() {
     fetch("/api/timetable")
       .then((res) => res.json())
       .then((data) => {
+        console.log("Fetched timetable data:", data);
         setTimetable(data.data);
       })
       .catch((error) => console.error("Error fetching timetable:", error));
   };
 
   const handleAddEntry = () => {
+    console.log("Add Schedule button pressed!");
     console.log("Current newEntry state before submission:", newEntry);
 
     if (
@@ -117,8 +119,12 @@ export default function Timetable() {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(updatedEntry),
     })
-      .then((res) => res.json())
-      .then(() => {
+      .then((res) => {
+        console.log("Response status:", res.status);
+        return res.json();
+      })
+      .then((data) => {
+        console.log("Response from API:", data);
         setNewEntry({
           course: "",
           lecturer: "",
@@ -132,24 +138,40 @@ export default function Timetable() {
       .catch((error) => console.error("Error adding entry:", error));
   };
 
+  // Updated generateRecurringEvents function that handles both legacy and new schema fields.
   const generateRecurringEvents = (entry) => {
     let occurrences = [];
-    if (!entry.date || typeof entry.date !== "string") return [];
 
-    let currentDate = new Date(entry.date);
+    // Determine the base date and time from the entry.
+    let baseDateString, baseTimeString;
+    if (entry.date && typeof entry.date === "string" && entry.time && typeof entry.time === "string") {
+      baseDateString = entry.date;
+      baseTimeString = entry.time;
+    } else if (entry.fullDateTime) {
+      const dt = new Date(entry.fullDateTime);
+      baseDateString = dt.toISOString().split("T")[0];
+      baseTimeString = dt.toTimeString().split(" ")[0];
+    } else {
+      return [];
+    }
+
+    let currentDate = new Date(baseDateString);
     if (isNaN(currentDate.getTime())) return [];
 
+    // Generate recurring events (up to 12 occurrences)
     for (let i = 0; i < 12; i++) {
       let eventDate = new Date(currentDate);
-      const fullDateTime = new Date(`${eventDate.toISOString().split("T")[0]}T${entry.time}`);
+      const fullDateTime = new Date(`${eventDate.toISOString().split("T")[0]}T${baseTimeString}`);
 
       if (isNaN(fullDateTime.getTime())) {
         console.error("Invalid date-time:", fullDateTime);
         continue;
       }
 
+      // Use entry._id (from MongoDB) if available; fallback to entry.id.
+      const eventId = entry._id || entry.id;
       occurrences.push({
-        id: `${entry.id}-${i}`,
+        id: `${eventId}-${i}`,
         title: `${entry.course} (${entry.lecturer})`,
         start: fullDateTime,
         extendedProps: { room: entry.room },
@@ -167,7 +189,9 @@ export default function Timetable() {
     return occurrences;
   };
 
-  const calendarEvents = timetable.flatMap((entry) => generateRecurringEvents(entry));
+  const calendarEvents = timetable.flatMap((entry) =>
+    generateRecurringEvents(entry)
+  );
 
   return (
     <Container maxWidth="lg" sx={{ mt: 5 }}>
@@ -189,7 +213,12 @@ export default function Timetable() {
 
       {viewMode === "calendar" && (
         <FullCalendar
-          plugins={[dayGridPlugin, timeGridPlugin, listPlugin, interactionPlugin]}
+          plugins={[
+            dayGridPlugin,
+            timeGridPlugin,
+            listPlugin,
+            interactionPlugin,
+          ]}
           initialView="dayGridMonth"
           headerToolbar={{
             left: "prev,next today",
@@ -212,7 +241,9 @@ export default function Timetable() {
                 label="Course Name"
                 fullWidth
                 value={newEntry.course}
-                onChange={(e) => setNewEntry({ ...newEntry, course: e.target.value })}
+                onChange={(e) =>
+                  setNewEntry({ ...newEntry, course: e.target.value })
+                }
               />
             </Grid>
             <Grid item xs={12} md={4}>
@@ -220,7 +251,9 @@ export default function Timetable() {
                 label="Lecturer"
                 fullWidth
                 value={newEntry.lecturer}
-                onChange={(e) => setNewEntry({ ...newEntry, lecturer: e.target.value })}
+                onChange={(e) =>
+                  setNewEntry({ ...newEntry, lecturer: e.target.value })
+                }
               />
             </Grid>
             <Grid item xs={12} md={4}>
@@ -228,8 +261,36 @@ export default function Timetable() {
                 label="Room Number"
                 fullWidth
                 value={newEntry.room}
-                onChange={(e) => setNewEntry({ ...newEntry, room: e.target.value })}
+                onChange={(e) =>
+                  setNewEntry({ ...newEntry, room: e.target.value })
+                }
               />
+            </Grid>
+            <Grid item xs={12} md={4}>
+              <LocalizationProvider dateAdapter={AdapterDateFns}>
+                <DatePicker
+                  label="Select Date"
+                  value={newEntry.date}
+                  onChange={(newDate) => {
+                    console.log("Date selected:", newDate);
+                    setNewEntry({ ...newEntry, date: newDate });
+                  }}
+                  renderInput={(params) => <TextField {...params} fullWidth />}
+                />
+              </LocalizationProvider>
+            </Grid>
+            <Grid item xs={12} md={4}>
+              <LocalizationProvider dateAdapter={AdapterDateFns}>
+                <TimePicker
+                  label="Select Time"
+                  value={newEntry.time}
+                  onChange={(newTime) => {
+                    console.log("Time selected:", newTime);
+                    setNewEntry({ ...newEntry, time: newTime });
+                  }}
+                  renderInput={(params) => <TextField {...params} fullWidth />}
+                />
+              </LocalizationProvider>
             </Grid>
             <Grid item xs={12} md={4}>
               <FormControl fullWidth>
@@ -237,7 +298,9 @@ export default function Timetable() {
                 <Select
                   value={newEntry.recurrence}
                   label="Recurrence"
-                  onChange={(e) => setNewEntry({ ...newEntry, recurrence: e.target.value })}
+                  onChange={(e) =>
+                    setNewEntry({ ...newEntry, recurrence: e.target.value })
+                  }
                 >
                   <MenuItem value="none">None</MenuItem>
                   <MenuItem value="weekly">Weekly</MenuItem>
