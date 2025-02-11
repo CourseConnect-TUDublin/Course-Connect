@@ -1,27 +1,30 @@
 // src/app/layout.js
-import "./globals.css";
+
+import { CssBaseline, Box, Toolbar } from "@mui/material";
+import Sidebar from "../components/Sidebar";
+import TopNav from "../components/TopNav";
 
 export const metadata = {
   title: "Course Connect",
-  description: "Manage your academic tasks and timetables.",
+  description: "University Timetable Application",
 };
 
 export default function RootLayout({ children }) {
   return (
     <html lang="en">
+      <head>
+        {/* You can add your common <head> elements here */}
+      </head>
       <body>
-        {/* Common header */}
-        <header style={{ padding: "1rem", background: "#f7f7f7" }}>
-          <h1>Course Connect</h1>
-        </header>
-
-        {/* Page content */}
-        <main>{children}</main>
-
-        {/* Common footer */}
-        <footer style={{ padding: "1rem", textAlign: "center", marginTop: "2rem", background: "#f7f7f7" }}>
-          &copy; {new Date().getFullYear()} Course Connect. All rights reserved.
-        </footer>
+        <CssBaseline />
+        <Box sx={{ display: "flex" }}>
+          <Sidebar />
+          <Box sx={{ flexGrow: 1, p: 3 }}>
+            <TopNav />
+            <Toolbar /> {/* This ensures there's space for the fixed top nav */}
+            {children} {/* This renders the page-specific content */}
+          </Box>
+        </Box>
       </body>
     </html>
   );
