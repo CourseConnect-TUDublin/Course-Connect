@@ -15,3 +15,7 @@ module.exports = withPWA({
     ignoreBuildErrors: true, // This is optional if you’re using TypeScript
   },
 });
+
+const nextConfig = {
+  reactStrictMode: true,
+};
