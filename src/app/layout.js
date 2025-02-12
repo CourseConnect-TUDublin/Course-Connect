@@ -12,18 +12,15 @@ export const metadata = {
 export default function RootLayout({ children }) {
   return (
     <html lang="en">
-      <head>
-        {/* Add your global head elements here */}
-      </head>
+      <head>{/* global head elements */}</head>
       <body>
         <CssBaseline />
-        {/* Wrap the entire app in the AuthProvider (client component) */}
         <ClientAuthProviderWrapper>
           <Box sx={{ display: "flex" }}>
             <Sidebar />
             <Box sx={{ flexGrow: 1 }}>
               <TopNav />
-              <Toolbar /> {/* This leaves space for the fixed TopNav */}
+              <Toolbar /> {/* Reserve space for fixed TopNav */}
               {children}
             </Box>
           </Box>

@@ -4,293 +4,322 @@ import { useEffect, useState } from "react";
 import {
   Container,
   Typography,
-  TextField,
-  Button,
-  Grid,
-  ToggleButton,
-  ToggleButtonGroup,
-  MenuItem,
   FormControl,
   InputLabel,
   Select,
+  MenuItem,
+  Grid,
+  AppBar,
+  Toolbar,
+  Button,
+  TextField,
+  Box,
 } from "@mui/material";
-import { DatePicker, TimePicker } from "@mui/x-date-pickers";
-import { AdapterDateFns } from "@mui/x-date-pickers/AdapterDateFns";
-import { LocalizationProvider } from "@mui/x-date-pickers/LocalizationProvider";
+import { useRouter } from "next/navigation";
 import FullCalendar from "@fullcalendar/react";
-import dayGridPlugin from "@fullcalendar/daygrid";
 import timeGridPlugin from "@fullcalendar/timegrid";
-import listPlugin from "@fullcalendar/list";
 import interactionPlugin from "@fullcalendar/interaction";
+import { LocalizationProvider } from "@mui/x-date-pickers/LocalizationProvider";
+import { DatePicker } from "@mui/x-date-pickers/DatePicker";
+import { TimePicker } from "@mui/x-date-pickers/TimePicker";
+import { AdapterDateFns } from "@mui/x-date-pickers/AdapterDateFns";
 
-export default function TimetablePage() {
-  // This page uses the global layout (from src/app/layout.js)
-  // so Sidebar and TopNav (with dynamic user info) are rendered automatically.
+const Navbar = () => {
+  const router = useRouter();
+  return (
+    <AppBar position="static" sx={{ backgroundColor: "#1565C0" }}>
+      <Toolbar>
+        <Typography variant="h6" sx={{ flexGrow: 1 }}>
+          TU Dublin - Timetable
+        </Typography>
+        <Button color="inherit" onClick={() => router.push("/dashboard")}>
+          Home
+        </Button>
+      </Toolbar>
+    </AppBar>
+  );
+};
 
-  const [newEntry, setNewEntry] = useState({
+export default function Timetable() {
+  // State for timetable events
+  const [timetable, setTimetable] = useState([]);
+  // State for programme data fetched from MongoDB
+  const [programmeData, setProgrammeData] = useState([]);
+  // Selected programme filter (only one dropdown)
+  const [selectedProgramme, setSelectedProgramme] = useState("");
+  const [refresh, setRefresh] = useState(Date.now());
+
+  // New event state – date and time are stored as Date objects.
+  // When submitted, these will be combined into a single fullDateTime.
+  const [newEvent, setNewEvent] = useState({
+    programme: "",
     course: "",
     lecturer: "",
-    room: "",
     date: null,
     time: null,
-    recurrence: "none",
+    group: "",
+    room: "",
   });
-  const [timetable, setTimetable] = useState([]);
-  const [viewMode, setViewMode] = useState("table");
 
+  // Fetch programme data from MongoDB (via /api/programmeData)
+  useEffect(() => {
+    fetch("/api/programmeData")
+      .then((res) => res.json())
+      .then((data) => {
+        if (data.success) {
+          setProgrammeData(data.data);
+          if (data.data.length > 0) {
+            const initialProgramme = data.data[0];
+            setSelectedProgramme(initialProgramme.name);
+            setNewEvent((prev) => ({
+              ...prev,
+              programme: initialProgramme.name,
+              course: initialProgramme.courses[0] || "",
+            }));
+          }
+        } else {
+          console.error("Failed to load programme data");
+        }
+      })
+      .catch((error) =>
+        console.error("Error fetching programme data from API:", error)
+      );
+  }, []);
+
+  // Fetch timetable events whenever the selected programme changes.
   useEffect(() => {
     fetchTimetable();
-  }, []);
+  }, [selectedProgramme]);
 
   const fetchTimetable = () => {
     fetch("/api/timetable")
       .then((res) => res.json())
       .then((data) => {
-        console.log("Fetched timetable data:", data);
-        setTimetable(data.data);
+        setTimetable(data.data || []);
       })
-      .catch((error) => console.error("Error fetching timetable:", error));
+      .catch((error) =>
+        console.error("Error fetching timetable:", error)
+      );
   };
 
-  const handleAddEntry = () => {
-    console.log("Add Schedule button pressed!");
-    console.log("Current newEntry state before submission:", newEntry);
+  // Filter events based on the selected programme.
+  // (Assumes each event document contains a "programme" field.)
+  const filteredEvents = Array.isArray(timetable)
+    ? timetable.filter((entry) => entry.programme === selectedProgramme)
+    : [];
 
-    if (
-      !newEntry.course ||
-      !newEntry.lecturer ||
-      !newEntry.room ||
-      !newEntry.date ||
-      !newEntry.time
-    ) {
-      console.error("Missing field detected in newEntry:", newEntry);
-      alert("All fields are required!");
-      return;
-    }
+  // Handle changes in the programme filter.
+  const handleProgrammeChange = (event) => {
+    const programmeName = event.target.value;
+    setSelectedProgramme(programmeName);
+    const currentProgramme = programmeData.find(
+      (prog) => prog.name === programmeName
+    );
+    setNewEvent((prev) => ({
+      ...prev,
+      programme: programmeName,
+      course:
+        currentProgramme && currentProgramme.courses.length > 0
+          ? currentProgramme.courses[0]
+          : "",
+    }));
+    setRefresh(Date.now());
+  };
 
-    if (!(newEntry.date instanceof Date) || isNaN(newEntry.date.getTime())) {
-      console.error("Invalid date format:", newEntry.date);
-      alert("Invalid date selected.");
-      return;
-    }
+  // Handle text field changes in the new event form.
+  const handleNewEventChange = (e) => {
+    setNewEvent({
+      ...newEvent,
+      [e.target.name]: e.target.value,
+    });
+  };
 
-    if (!(newEntry.time instanceof Date) || isNaN(newEntry.time.getTime())) {
-      console.error("Invalid time format:", newEntry.time);
-      alert("Invalid time selected.");
-      return;
-    }
+  // Handle submission of a new event.
+  const handleSubmitEvent = () => {
+    // Combine the selected date and time into one Date object.
+    const combinedDateTime =
+      newEvent.date && newEvent.time
+        ? new Date(
+            newEvent.date.getFullYear(),
+            newEvent.date.getMonth(),
+            newEvent.date.getDate(),
+            newEvent.time.getHours(),
+            newEvent.time.getMinutes(),
+            newEvent.time.getSeconds()
+          )
+        : null;
 
-    const formattedDate = newEntry.date.toISOString().split("T")[0];
-    const formattedTime = newEntry.time.toTimeString().split(" ")[0];
-
-    console.log("Formatted Date:", formattedDate);
-    console.log("Formatted Time:", formattedTime);
-
-    const updatedEntry = {
-      ...newEntry,
-      date: formattedDate,
-      time: formattedTime,
-      recurrence: newEntry.recurrence || "none",
+    // Prepare the event object for submission.
+    const eventToSubmit = {
+      ...newEvent,
+      fullDateTime: combinedDateTime, // This field will be stored in MongoDB.
     };
-
-    console.log("Final Entry to be Sent:", updatedEntry);
 
     fetch("/api/timetable", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(updatedEntry),
+      body: JSON.stringify(eventToSubmit),
     })
-      .then((res) => {
-        console.log("Response status:", res.status);
-        return res.json();
-      })
+      .then((res) => res.json())
       .then((data) => {
-        console.log("Response from API:", data);
-        setNewEntry({
-          course: "",
-          lecturer: "",
-          room: "",
-          date: null,
-          time: null,
-          recurrence: "none",
-        });
-        fetchTimetable();
+        if (data.success) {
+          fetchTimetable();
+          // Clear non-programme fields after successful addition.
+          setNewEvent((prev) => ({
+            ...prev,
+            lecturer: "",
+            date: null,
+            time: null,
+            group: "",
+            room: "",
+          }));
+        } else {
+          console.error("Failed to add event:", data.error);
+        }
       })
-      .catch((error) => console.error("Error adding entry:", error));
-  };
-
-  // Function to generate recurring events from a timetable entry.
-  const generateRecurringEvents = (entry) => {
-    let occurrences = [];
-    let baseDateString, baseTimeString;
-    if (
-      entry.date &&
-      typeof entry.date === "string" &&
-      entry.time &&
-      typeof entry.time === "string"
-    ) {
-      baseDateString = entry.date;
-      baseTimeString = entry.time;
-    } else if (entry.fullDateTime) {
-      const dt = new Date(entry.fullDateTime);
-      baseDateString = dt.toISOString().split("T")[0];
-      baseTimeString = dt.toTimeString().split(" ")[0];
-    } else {
-      return [];
-    }
-
-    let currentDate = new Date(baseDateString);
-    if (isNaN(currentDate.getTime())) return [];
-
-    for (let i = 0; i < 12; i++) {
-      let eventDate = new Date(currentDate);
-      const fullDateTime = new Date(
-        `${eventDate.toISOString().split("T")[0]}T${baseTimeString}`
-      );
-
-      if (isNaN(fullDateTime.getTime())) {
-        console.error("Invalid date-time:", fullDateTime);
-        continue;
-      }
-
-      const eventId = entry._id || entry.id;
-      occurrences.push({
-        id: `${eventId}-${i}`,
-        title: `${entry.course} (${entry.lecturer})`,
-        start: fullDateTime,
-        extendedProps: { room: entry.room },
+      .catch((error) => {
+        console.error("Error adding event:", error);
       });
-
-      if (entry.recurrence === "weekly") {
-        currentDate.setDate(currentDate.getDate() + 7);
-      } else if (entry.recurrence === "biweekly") {
-        currentDate.setDate(currentDate.getDate() + 14);
-      } else {
-        break;
-      }
-    }
-    return occurrences;
   };
-
-  const calendarEvents = timetable.flatMap((entry) => generateRecurringEvents(entry));
 
   return (
-    <Container maxWidth="lg" sx={{ mt: 5 }}>
-      <Typography variant="h4" gutterBottom sx={{ textAlign: "center" }}>
-        University Timetable
-      </Typography>
-      <ToggleButtonGroup
-        value={viewMode}
-        exclusive
-        onChange={(_, newValue) => setViewMode(newValue || "table")}
-        sx={{ display: "flex", justifyContent: "center", mb: 3 }}
-      >
-        <ToggleButton value="table">Table View</ToggleButton>
-        <ToggleButton value="calendar">Calendar View</ToggleButton>
-      </ToggleButtonGroup>
-      {viewMode === "calendar" && (
-        <FullCalendar
-          plugins={[dayGridPlugin, timeGridPlugin, listPlugin, interactionPlugin]}
-          initialView="dayGridMonth"
-          headerToolbar={{
-            left: "prev,next today",
-            center: "title",
-            right: "dayGridMonth,timeGridWeek,timeGridDay,listWeek",
-          }}
-          events={calendarEvents}
-          height="auto"
-        />
-      )}
-      {viewMode === "table" && (
-        <>
+    <Container maxWidth="xl" sx={{ mt: 5 }}>
+      <Navbar />
+      <Grid container spacing={3}>
+        {/* Left Sidebar: Programme Filter & New Event Form */}
+        <Grid item xs={3}>
           <Typography variant="h6" gutterBottom>
-            Add New Schedule
+            Select Programme
           </Typography>
-          <Grid container spacing={2}>
-            <Grid item xs={12} md={4}>
-              <TextField
-                label="Course Name"
-                fullWidth
-                value={newEntry.course}
-                onChange={(e) =>
-                  setNewEntry({ ...newEntry, course: e.target.value })
+          <FormControl fullWidth sx={{ mt: 2 }}>
+            <InputLabel>Programme</InputLabel>
+            <Select
+              value={selectedProgramme}
+              onChange={handleProgrammeChange}
+            >
+              {programmeData.map((prog) => (
+                <MenuItem key={prog.name} value={prog.name}>
+                  {prog.name}
+                </MenuItem>
+              ))}
+            </Select>
+          </FormControl>
+          <Box mt={4}>
+            <Typography variant="h6" gutterBottom>
+              Add New Event
+            </Typography>
+            {/* Course Dropdown */}
+            <FormControl fullWidth sx={{ mt: 2 }}>
+              <InputLabel>Course</InputLabel>
+              <Select
+                name="course"
+                value={newEvent.course}
+                onChange={handleNewEventChange}
+              >
+                {(() => {
+                  const currentProgramme = programmeData.find(
+                    (prog) => prog.name === selectedProgramme
+                  );
+                  const courses = currentProgramme ? currentProgramme.courses : [];
+                  return courses.map((course) => (
+                    <MenuItem key={course} value={course}>
+                      {course}
+                    </MenuItem>
+                  ));
+                })()}
+              </Select>
+            </FormControl>
+            <TextField
+              margin="dense"
+              name="lecturer"
+              label="Lecturer"
+              fullWidth
+              value={newEvent.lecturer}
+              onChange={handleNewEventChange}
+            />
+            <LocalizationProvider dateAdapter={AdapterDateFns}>
+              <DatePicker
+                label="Date"
+                value={newEvent.date}
+                onChange={(newValue) =>
+                  setNewEvent((prev) => ({ ...prev, date: newValue }))
                 }
+                renderInput={(params) => (
+                  <TextField {...params} fullWidth margin="dense" />
+                )}
               />
-            </Grid>
-            <Grid item xs={12} md={4}>
-              <TextField
-                label="Lecturer"
-                fullWidth
-                value={newEntry.lecturer}
-                onChange={(e) =>
-                  setNewEntry({ ...newEntry, lecturer: e.target.value })
+              <TimePicker
+                label="Start Time"
+                value={newEvent.time}
+                onChange={(newValue) =>
+                  setNewEvent((prev) => ({ ...prev, time: newValue }))
                 }
+                renderInput={(params) => (
+                  <TextField {...params} fullWidth margin="dense" />
+                )}
               />
-            </Grid>
-            <Grid item xs={12} md={4}>
-              <TextField
-                label="Room Number"
+            </LocalizationProvider>
+            <TextField
+              margin="dense"
+              name="group"
+              label="Group"
+              fullWidth
+              value={newEvent.group}
+              onChange={handleNewEventChange}
+            />
+            <TextField
+              margin="dense"
+              name="room"
+              label="Room"
+              fullWidth
+              value={newEvent.room}
+              onChange={handleNewEventChange}
+            />
+            <Box mt={2}>
+              <Button
+                variant="contained"
                 fullWidth
-                value={newEntry.room}
-                onChange={(e) =>
-                  setNewEntry({ ...newEntry, room: e.target.value })
-                }
-              />
-            </Grid>
-            <Grid item xs={12} md={4}>
-              <LocalizationProvider dateAdapter={AdapterDateFns}>
-                <DatePicker
-                  label="Select Date"
-                  value={newEntry.date}
-                  onChange={(newDate) => {
-                    console.log("Date selected:", newDate);
-                    setNewEntry({ ...newEntry, date: newDate });
-                  }}
-                  renderInput={(params) => <TextField {...params} fullWidth />}
-                />
-              </LocalizationProvider>
-            </Grid>
-            <Grid item xs={12} md={4}>
-              <LocalizationProvider dateAdapter={AdapterDateFns}>
-                <TimePicker
-                  label="Select Time"
-                  value={newEntry.time}
-                  onChange={(newTime) => {
-                    console.log("Time selected:", newTime);
-                    setNewEntry({ ...newEntry, time: newTime });
-                  }}
-                  renderInput={(params) => <TextField {...params} fullWidth />}
-                />
-              </LocalizationProvider>
-            </Grid>
-            <Grid item xs={12} md={4}>
-              <FormControl fullWidth>
-                <InputLabel>Recurrence</InputLabel>
-                <Select
-                  value={newEntry.recurrence}
-                  label="Recurrence"
-                  onChange={(e) =>
-                    setNewEntry({ ...newEntry, recurrence: e.target.value })
-                  }
-                >
-                  <MenuItem value="none">None</MenuItem>
-                  <MenuItem value="weekly">Weekly</MenuItem>
-                  <MenuItem value="biweekly">Biweekly</MenuItem>
-                </Select>
-              </FormControl>
-            </Grid>
-          </Grid>
-          <Button
-            variant="contained"
-            color="success"
-            fullWidth
-            sx={{ mt: 2 }}
-            onClick={handleAddEntry}
-          >
-            Add Schedule
-          </Button>
-        </>
-      )}
+                onClick={handleSubmitEvent}
+              >
+                Add Event
+              </Button>
+            </Box>
+          </Box>
+        </Grid>
+
+        {/* Right Side: Timetable Display */}
+        <Grid item xs={9}>
+          <Typography variant="h4" align="center" gutterBottom>
+            Weekly Timetable
+          </Typography>
+          <FullCalendar
+            key={refresh}
+            plugins={[timeGridPlugin, interactionPlugin]}
+            initialView="timeGridWeek"
+            headerToolbar={{
+              left: "prev,next today",
+              center: "title",
+              right: "timeGridWeek,timeGridDay",
+            }}
+            events={filteredEvents.map((entry) => {
+              // Use fullDateTime as the event start.
+              // Here we assume each event lasts 1 hour.
+              const start = new Date(entry.fullDateTime);
+              const end = new Date(start.getTime() + 60 * 60 * 1000);
+              return {
+                title: `${entry.course} (${entry.lecturer})`,
+                start: start,
+                end: end,
+                extendedProps: { room: entry.room },
+              };
+            })}
+            // Update slot range to display all hours so events at midnight are visible.
+            slotMinTime="00:00:00"
+            slotMaxTime="24:00:00"
+            height="auto"
+          />
+        </Grid>
+      </Grid>
     </Container>
   );
 }

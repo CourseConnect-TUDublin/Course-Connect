@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useAuth } from "../../context/AuthContext"; // Adjust the path if needed
+import { useAuth } from "../../context/AuthContext"; // Adjust path as needed
 import {
   Box,
   CssBaseline,
@@ -36,7 +36,7 @@ import {
 const drawerWidth = 240;
 
 export default function CourseConnectDashboard() {
-  // Retrieve the current user from the AuthContext.
+  // Get the current user from AuthContext
   const { user } = useAuth();
 
   return (
@@ -75,7 +75,7 @@ export default function CourseConnectDashboard() {
               component={Link}
               href={
                 text === "Home"
-                  ? "/dashboard" // Home now redirects to /dashboard
+                  ? "/dashboard" // redirects to /dashboard
                   : text === "Timetable"
                   ? "/timetable"
                   : text.toLowerCase().replace(/\s+/g, "")
@@ -133,7 +133,7 @@ export default function CourseConnectDashboard() {
             <IconButton color="inherit">
               <Notifications />
             </IconButton>
-            <Typography variant="body1">
+            <Typography variant="body1" sx={{ ml: 2 }}>
               {user ? user.name : "Guest"}
             </Typography>
           </Toolbar>
