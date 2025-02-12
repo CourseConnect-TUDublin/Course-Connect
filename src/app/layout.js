@@ -1,8 +1,8 @@
 // src/app/layout.js
-
-import { CssBaseline, Box, Toolbar } from "@mui/material";
+import ClientAuthProviderWrapper from "../components/ClientAuthProviderWrapper";
 import Sidebar from "../components/Sidebar";
 import TopNav from "../components/TopNav";
+import { CssBaseline, Box, Toolbar } from "@mui/material";
 
 export const metadata = {
   title: "Course Connect",
@@ -13,18 +13,21 @@ export default function RootLayout({ children }) {
   return (
     <html lang="en">
       <head>
-        {/* You can add your common <head> elements here */}
+        {/* Add your global head elements here */}
       </head>
       <body>
         <CssBaseline />
-        <Box sx={{ display: "flex" }}>
-          <Sidebar />
-          <Box sx={{ flexGrow: 1, p: 3 }}>
-            <TopNav />
-            <Toolbar /> {/* This ensures there's space for the fixed top nav */}
-            {children} {/* This renders the page-specific content */}
+        {/* Wrap the entire app in the AuthProvider (client component) */}
+        <ClientAuthProviderWrapper>
+          <Box sx={{ display: "flex" }}>
+            <Sidebar />
+            <Box sx={{ flexGrow: 1 }}>
+              <TopNav />
+              <Toolbar /> {/* This leaves space for the fixed TopNav */}
+              {children}
+            </Box>
           </Box>
-        </Box>
+        </ClientAuthProviderWrapper>
       </body>
     </html>
   );

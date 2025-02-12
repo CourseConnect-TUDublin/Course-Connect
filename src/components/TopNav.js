@@ -4,9 +4,12 @@
 import { useRouter } from "next/navigation";
 import { AppBar, Toolbar, Typography, IconButton } from "@mui/material";
 import { Search, Notifications } from "@mui/icons-material";
+import { useAuth } from "../context/AuthContext";
 
-export default function TopNav({ currentUser }) {
+export default function TopNav() {
   const router = useRouter();
+  const { user } = useAuth();
+
   return (
     <AppBar
       position="fixed"
@@ -28,7 +31,7 @@ export default function TopNav({ currentUser }) {
           <Notifications />
         </IconButton>
         <Typography variant="body1">
-          {currentUser ? currentUser.name : "Guest"}
+          {user ? user.name : "Guest"}
         </Typography>
       </Toolbar>
     </AppBar>
