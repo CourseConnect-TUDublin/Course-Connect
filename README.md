@@ -133,7 +133,7 @@ npm run dev  # Start the backend server
 
 The backend runs on: http://localhost:5000
 
-## Testing Setup
+## Testing Setupp
 
 # Running Tests
 
