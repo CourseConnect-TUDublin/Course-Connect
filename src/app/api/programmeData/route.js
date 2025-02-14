@@ -1,13 +1,18 @@
-// /src/app/api/programmeData/route.js
+// src/app/api/programmeData/route.js
 
-import { connectToDatabase } from "@/lib/dbConnect"; // Ensure this path is correct
+import { connectToDatabase } from "../../../lib/dbConnect";
+import Programme from "../../../models/Programme";
 
 export async function GET(request) {
   try {
-    const { db } = await connectToDatabase();
-    // Use the exact collection name "Programmes" as created in Compass
-    const programmes = await db.collection("Programmes").find({}).toArray();
+    const conn = await connectToDatabase();
 
+    // List all collections in the connected database
+    const collections = await conn.connection.db.listCollections().toArray();
+    console.log("Collections in DB:", collections.map(c => c.name));
+
+    // Query the Programme collection using the Mongoose model.
+    const programmes = await Programme.find();
     console.log("Fetched programmes:", programmes);
 
     return new Response(
