@@ -1,7 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { useAuth } from "../../context/AuthContext"; // Adjust path as needed
+import { useAuth } from "../../context/AuthContext";
+import { useState, useEffect } from "react";
 import {
   Box,
   CssBaseline,
@@ -15,8 +16,7 @@ import {
   ListItemIcon,
   ListItemText,
   Grid,
-  Card,
-  CardContent,
+  Paper,
   Button,
 } from "@mui/material";
 import {
@@ -32,12 +32,39 @@ import {
   Search,
   Notifications,
 } from "@mui/icons-material";
+import CalendarWidget from "../../components/CalendarWidget";
 
 const drawerWidth = 240;
 
 export default function CourseConnectDashboard() {
   // Get the current user from AuthContext
   const { user } = useAuth();
+  const userName = user ? user.name : "Guest";
+
+  // Dummy timetable events state – in a real app, fetch from your backend
+  const [timetable, setTimetable] = useState([]);
+  // Refresh trigger for CalendarWidget
+  const [refresh, setRefresh] = useState(Date.now());
+
+  // Dummy fetch function – replace with actual API call as needed
+  const fetchTimetable = () => {
+    fetch("/api/timetable")
+      .then((res) => res.json())
+      .then((data) => {
+        setTimetable(data.data || []);
+      })
+      .catch((error) => console.error("Error fetching timetable:", error));
+  };
+
+  // Initially fetch timetable events on component mount
+  useEffect(() => {
+    fetchTimetable();
+  }, []);
+
+  // For this example, assume the dashboard shows events for "TU860 YR3"
+  const filteredEvents = timetable.filter(
+    (entry) => entry.programme === "TU860 YR3"
+  );
 
   return (
     <Box sx={{ display: "flex" }}>
@@ -75,7 +102,7 @@ export default function CourseConnectDashboard() {
               component={Link}
               href={
                 text === "Home"
-                  ? "/dashboard" // redirects to /dashboard
+                  ? "/dashboard"
                   : text === "Timetable"
                   ? "/timetable"
                   : text.toLowerCase().replace(/\s+/g, "")
@@ -134,7 +161,7 @@ export default function CourseConnectDashboard() {
               <Notifications />
             </IconButton>
             <Typography variant="body1" sx={{ ml: 2 }}>
-              {user ? user.name : "Guest"}
+              {userName}
             </Typography>
           </Toolbar>
         </AppBar>
@@ -142,69 +169,115 @@ export default function CourseConnectDashboard() {
 
         {/* Dashboard Content */}
         <Box sx={{ mt: 2 }}>
-          <Typography variant="h4" gutterBottom sx={{ textAlign: "center" }}>
-            Dashboard
+          {/* Welcome & Subheading */}
+          <Typography variant="h5" gutterBottom>
+            Welcome, {userName}!
           </Typography>
-          <Typography variant="subtitle1" align="center" sx={{ mb: 3 }}>
-            Welcome, {user ? user.name : "Guest"}!
+          <Typography variant="subtitle1" sx={{ mb: 3 }}>
+            Here is your agenda for today
           </Typography>
+
+          {/* Main Grid Layout */}
           <Grid container spacing={3}>
-            {/* Task Management Card */}
-            <Grid item xs={12} sm={6} md={4}>
-              <Card>
-                <CardContent>
-                  <Typography variant="h6">Task Management</Typography>
-                  <Typography variant="body1">
-                    Manage your daily tasks efficiently.
-                  </Typography>
-                  <Button
-                    variant="contained"
-                    sx={{ mt: 2 }}
-                    component={Link}
-                    href="/taskmanager"
+            {/* Top Row: Urgent Tasks & Uncomplete Flashcards */}
+            <Grid item xs={12}>
+              <Grid container spacing={3}>
+                {/* Urgent Tasks */}
+                <Grid item xs={12} md={6}>
+                  <Paper
+                    elevation={3}
+                    sx={{ p: 2, backgroundColor: "#F5F5F5", height: "100%" }}
                   >
-                    Go to Task Manager
-                  </Button>
-                </CardContent>
-              </Card>
+                    <Typography variant="h6" sx={{ mb: 2 }}>
+                      Urgent Tasks
+                    </Typography>
+                    <Typography variant="body1" sx={{ mb: 1 }}>
+                      Finish OOP Project Work{" "}
+                      <Typography component="span" color="secondary">
+                        • Today
+                      </Typography>
+                    </Typography>
+                    <Typography variant="body1" sx={{ mb: 1 }}>
+                      Major Group Diary{" "}
+                      <Typography component="span" color="secondary">
+                        • Today
+                      </Typography>
+                    </Typography>
+                    <Typography variant="body1">
+                      CA 2 Revision{" "}
+                      <Typography component="span" color="secondary">
+                        • Today
+                      </Typography>
+                    </Typography>
+                  </Paper>
+                </Grid>
+                {/* Uncomplete Flashcards */}
+                <Grid item xs={12} md={6}>
+                  <Paper
+                    elevation={3}
+                    sx={{ p: 2, backgroundColor: "#F5F5F5", height: "100%" }}
+                  >
+                    <Typography variant="h6" sx={{ mb: 2 }}>
+                      Uncomplete Flashcards
+                    </Typography>
+                    <Box sx={{ display: "flex", gap: 2, flexWrap: "wrap" }}>
+                      <Paper
+                        sx={{
+                          p: 1,
+                          minWidth: "100px",
+                          backgroundColor: "#F2E7FE",
+                          cursor: "pointer",
+                        }}
+                      >
+                        <Typography>#Research</Typography>
+                      </Paper>
+                      <Paper
+                        sx={{
+                          p: 1,
+                          minWidth: "100px",
+                          backgroundColor: "#E3FCEF",
+                          cursor: "pointer",
+                        }}
+                      >
+                        <Typography>#SWOT analysis</Typography>
+                      </Paper>
+                      <Paper
+                        sx={{
+                          p: 1,
+                          minWidth: "100px",
+                          backgroundColor: "#FFF5DA",
+                          cursor: "pointer",
+                        }}
+                      >
+                        <Typography>#Operations</Typography>
+                      </Paper>
+                      <Paper
+                        sx={{
+                          p: 1,
+                          minWidth: "100px",
+                          backgroundColor: "#FFDCE5",
+                          cursor: "pointer",
+                        }}
+                      >
+                        <Typography>#Strategy design</Typography>
+                      </Paper>
+                    </Box>
+                  </Paper>
+                </Grid>
+              </Grid>
             </Grid>
-            {/* Learning Insights Card */}
-            <Grid item xs={12} sm={6} md={4}>
-              <Card>
-                <CardContent>
-                  <Typography variant="h6">Learning Insights</Typography>
-                  <Typography variant="body1">
-                    Track your learning progress.
-                  </Typography>
-                  <Button
-                    variant="contained"
-                    sx={{ mt: 2 }}
-                    component={Link}
-                    href="/learninginsights"
-                  >
-                    View Insights
-                  </Button>
-                </CardContent>
-              </Card>
-            </Grid>
-            {/* Timetable Card */}
-            <Grid item xs={12} sm={6} md={4}>
-              <Card>
-                <CardContent>
-                  <Typography variant="h6">Timetable</Typography>
-                  <Typography variant="body1">
-                    View your course schedule.
-                  </Typography>
-                  <Button
-                    variant="contained"
-                    sx={{ mt: 2 }}
-                    component={Link}
-                    href="/timetable"
-                  >
-                    Go to Timetable
-                  </Button>
-                </CardContent>
-              </Card>
+
+            {/* Second Row: Calendar Section */}
+            <Grid item xs={12}>
+              <Paper
+                elevation={3}
+                sx={{ p: 2, backgroundColor: "#F5F5F5", mt: 2 }}
+              >
+                <Typography variant="h6" sx={{ mb: 2 }}>
+                  Your Weekly Calendar
+                </Typography>
+                <CalendarWidget events={filteredEvents} refresh={refresh} />
+              </Paper>
             </Grid>
           </Grid>
         </Box>

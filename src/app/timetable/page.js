@@ -16,13 +16,11 @@ import {
   Box,
 } from "@mui/material";
 import { useRouter } from "next/navigation";
-import FullCalendar from "@fullcalendar/react";
-import timeGridPlugin from "@fullcalendar/timegrid";
-import interactionPlugin from "@fullcalendar/interaction";
 import { LocalizationProvider } from "@mui/x-date-pickers/LocalizationProvider";
 import { DatePicker } from "@mui/x-date-pickers/DatePicker";
 import { TimePicker } from "@mui/x-date-pickers/TimePicker";
 import { AdapterDateFns } from "@mui/x-date-pickers/AdapterDateFns";
+import CalendarWidget from "../../components/CalendarWidget"; // <-- Import your new component
 
 const Navbar = () => {
   const router = useRouter();
@@ -41,16 +39,12 @@ const Navbar = () => {
 };
 
 export default function Timetable() {
-  // State for timetable events
   const [timetable, setTimetable] = useState([]);
-  // State for programme data fetched from MongoDB
   const [programmeData, setProgrammeData] = useState([]);
-  // Selected programme filter (only one dropdown)
   const [selectedProgramme, setSelectedProgramme] = useState("");
   const [refresh, setRefresh] = useState(Date.now());
 
-  // New event state – date and time are stored as Date objects.
-  // When submitted, these will be combined into a single fullDateTime.
+  // New event state – date and time are stored as Date objects
   const [newEvent, setNewEvent] = useState({
     programme: "",
     course: "",
@@ -61,7 +55,7 @@ export default function Timetable() {
     room: "",
   });
 
-  // Fetch programme data from MongoDB (via /api/programmeData)
+  // 1. Fetch programme data from /api/programmeData
   useEffect(() => {
     fetch("/api/programmeData")
       .then((res) => res.json())
@@ -81,12 +75,10 @@ export default function Timetable() {
           console.error("Failed to load programme data");
         }
       })
-      .catch((error) =>
-        console.error("Error fetching programme data from API:", error)
-      );
+      .catch((error) => console.error("Error fetching programme data:", error));
   }, []);
 
-  // Fetch timetable events whenever the selected programme changes.
+  // 2. Fetch timetable events whenever the selected programme changes
   useEffect(() => {
     fetchTimetable();
   }, [selectedProgramme]);
@@ -97,18 +89,15 @@ export default function Timetable() {
       .then((data) => {
         setTimetable(data.data || []);
       })
-      .catch((error) =>
-        console.error("Error fetching timetable:", error)
-      );
+      .catch((error) => console.error("Error fetching timetable:", error));
   };
 
-  // Filter events based on the selected programme.
-  // (Assumes each event document contains a "programme" field.)
+  // 3. Filter events by the selected programme
   const filteredEvents = Array.isArray(timetable)
     ? timetable.filter((entry) => entry.programme === selectedProgramme)
     : [];
 
-  // Handle changes in the programme filter.
+  // Handle programme dropdown change
   const handleProgrammeChange = (event) => {
     const programmeName = event.target.value;
     setSelectedProgramme(programmeName);
@@ -126,7 +115,7 @@ export default function Timetable() {
     setRefresh(Date.now());
   };
 
-  // Handle text field changes in the new event form.
+  // Handle form field changes for newEvent
   const handleNewEventChange = (e) => {
     setNewEvent({
       ...newEvent,
@@ -134,9 +123,8 @@ export default function Timetable() {
     });
   };
 
-  // Handle submission of a new event.
+  // Combine date/time and submit new event
   const handleSubmitEvent = () => {
-    // Combine the selected date and time into one Date object.
     const combinedDateTime =
       newEvent.date && newEvent.time
         ? new Date(
@@ -149,10 +137,9 @@ export default function Timetable() {
           )
         : null;
 
-    // Prepare the event object for submission.
     const eventToSubmit = {
       ...newEvent,
-      fullDateTime: combinedDateTime, // This field will be stored in MongoDB.
+      fullDateTime: combinedDateTime,
     };
 
     fetch("/api/timetable", {
@@ -164,7 +151,7 @@ export default function Timetable() {
       .then((data) => {
         if (data.success) {
           fetchTimetable();
-          // Clear non-programme fields after successful addition.
+          // Reset some fields
           setNewEvent((prev) => ({
             ...prev,
             lecturer: "",
@@ -193,10 +180,7 @@ export default function Timetable() {
           </Typography>
           <FormControl fullWidth sx={{ mt: 2 }}>
             <InputLabel>Programme</InputLabel>
-            <Select
-              value={selectedProgramme}
-              onChange={handleProgrammeChange}
-            >
+            <Select value={selectedProgramme} onChange={handleProgrammeChange}>
               {programmeData.map((prog) => (
                 <MenuItem key={prog.name} value={prog.name}>
                   {prog.name}
@@ -204,11 +188,11 @@ export default function Timetable() {
               ))}
             </Select>
           </FormControl>
+
           <Box mt={4}>
             <Typography variant="h6" gutterBottom>
               Add New Event
             </Typography>
-            {/* Course Dropdown */}
             <FormControl fullWidth sx={{ mt: 2 }}>
               <InputLabel>Course</InputLabel>
               <Select
@@ -220,7 +204,9 @@ export default function Timetable() {
                   const currentProgramme = programmeData.find(
                     (prog) => prog.name === selectedProgramme
                   );
-                  const courses = currentProgramme ? currentProgramme.courses : [];
+                  const courses = currentProgramme
+                    ? currentProgramme.courses
+                    : [];
                   return courses.map((course) => (
                     <MenuItem key={course} value={course}>
                       {course}
@@ -276,11 +262,7 @@ export default function Timetable() {
               onChange={handleNewEventChange}
             />
             <Box mt={2}>
-              <Button
-                variant="contained"
-                fullWidth
-                onClick={handleSubmitEvent}
-              >
+              <Button variant="contained" fullWidth onClick={handleSubmitEvent}>
                 Add Event
               </Button>
             </Box>
@@ -292,32 +274,8 @@ export default function Timetable() {
           <Typography variant="h4" align="center" gutterBottom>
             Weekly Timetable
           </Typography>
-          <FullCalendar
-            key={refresh}
-            plugins={[timeGridPlugin, interactionPlugin]}
-            initialView="timeGridWeek"
-            headerToolbar={{
-              left: "prev,next today",
-              center: "title",
-              right: "timeGridWeek,timeGridDay",
-            }}
-            events={filteredEvents.map((entry) => {
-              // Use fullDateTime as the event start.
-              // Here we assume each event lasts 1 hour.
-              const start = new Date(entry.fullDateTime);
-              const end = new Date(start.getTime() + 60 * 60 * 1000);
-              return {
-                title: `${entry.course} (${entry.lecturer})`,
-                start: start,
-                end: end,
-                extendedProps: { room: entry.room },
-              };
-            })}
-            // Update slot range to display all hours so events at midnight are visible.
-            slotMinTime="00:00:00"
-            slotMaxTime="24:00:00"
-            height="auto"
-          />
+          {/* Use the new CalendarWidget here */}
+          <CalendarWidget events={filteredEvents} refresh={refresh} />
         </Grid>
       </Grid>
     </Container>
