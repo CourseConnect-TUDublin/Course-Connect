@@ -1,7 +1,7 @@
 // src/app/api/register/route.js
 
-import dbConnect from 'src/lib/dbConnect.js';
-import User from 'src/models/User.js';
+import dbConnect from '../../../lib/dbConnect.js';
+import User from '../../../models/User.js';
 import bcrypt from 'bcrypt';
 
 export async function POST(req) {
@@ -50,7 +50,7 @@ export async function POST(req) {
   } catch (error) {
     console.error("Error during registration:", error);
     return new Response(
-      JSON.stringify({ message: "Internal Server Error" }),
+      JSON.stringify({ message: "Internal Server Error", error: error.message }),
       {
         status: 500,
         headers: { "Content-Type": "application/json" },

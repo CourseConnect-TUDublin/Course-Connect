@@ -1,6 +1,6 @@
 // src/app/api/login/route.js
-import dbConnect from 'src/lib/dbConnect.js';
-import User from 'src/models/User.js';
+import dbConnect from '../../../lib/dbConnect.js';
+import User from '../../../models/User.js';
 import bcrypt from 'bcrypt';
 
 export async function POST(req) {
