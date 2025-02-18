@@ -20,11 +20,12 @@ async function dbConnect() {
     return cached.conn;
   }
   if (!cached.promise) {
-    // No need for useNewUrlParser or useUnifiedTopology in Mongoose v6+
     cached.promise = mongoose.connect(MONGODB_URI);
   }
   cached.conn = await cached.promise;
   return cached.conn;
 }
 
+// Export as a named export "connectToDatabase" and also as the default export
+export { dbConnect as connectToDatabase };
 export default dbConnect;
