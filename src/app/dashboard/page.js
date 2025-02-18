@@ -92,7 +92,7 @@ export default function CourseConnectDashboard() {
             "Assignments",
             "To-Do",
             "Study-Buddy",
-            "Chat Room",
+            "Archive",
             "Calendar",
             "Help Center",
             "Settings",
