@@ -1,16 +1,13 @@
-// src/models/Timetable.js
 import mongoose from "mongoose";
 
 const TimetableSchema = new mongoose.Schema({
-  programme: String,
-  course: String,
-  lecturer: String,
-  room: String,
-  fullDateTime: Date,
-  group: String,
+  userId: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true }, // ✅ Links timetable entry to a user
+  programme: { type: String, required: true },
+  course: { type: String, required: true },
+  lecturer: { type: String, required: true },
+  room: { type: String, required: true },
+  fullDateTime: { type: Date, required: true },
+  group: { type: String, required: true }
 });
 
-// Prevent model overwrite in development
-const Timetable = mongoose.models.Timetable || mongoose.model("Timetable", TimetableSchema);
-
-export default Timetable;
+export default mongoose.models.Timetable || mongoose.model("Timetable", TimetableSchema);
