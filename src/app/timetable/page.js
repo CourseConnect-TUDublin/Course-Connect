@@ -4,25 +4,32 @@ import { useEffect, useState } from "react";
 import {
   Container,
   Typography,
+  TextField,
+  Button,
+  Grid,
+  ToggleButton,
+  ToggleButtonGroup,
+  AppBar,
+  Toolbar,
   FormControl,
   InputLabel,
   Select,
   MenuItem,
-  Grid,
-  AppBar,
-  Toolbar,
-  Button,
-  TextField,
-  Box,
+  Box
 } from "@mui/material";
+import Link from "next/link";
+import { useSession, signIn } from "next-auth/react";
 import { useRouter } from "next/navigation";
-import { LocalizationProvider } from "@mui/x-date-pickers/LocalizationProvider";
-import { DatePicker } from "@mui/x-date-pickers/DatePicker";
-import { TimePicker } from "@mui/x-date-pickers/TimePicker";
-import { AdapterDateFns } from "@mui/x-date-pickers/AdapterDateFns";
-import CalendarWidget from "../../components/CalendarWidget"; // <-- Import your new component
 
-const Navbar = () => {
+// Import Date & Time Pickers
+import { DatePicker, TimePicker } from "@mui/x-date-pickers";
+import { AdapterDateFns } from "@mui/x-date-pickers/AdapterDateFns";
+import { LocalizationProvider } from "@mui/x-date-pickers/LocalizationProvider";
+
+// Import CalendarWidget component
+import CalendarWidget from "../../components/CalendarWidget";
+
+function Navbar() {
   const router = useRouter();
   return (
     <AppBar position="static" sx={{ backgroundColor: "#1565C0" }}>
@@ -30,21 +37,23 @@ const Navbar = () => {
         <Typography variant="h6" sx={{ flexGrow: 1 }}>
           TU Dublin - Timetable
         </Typography>
-        <Button color="inherit" onClick={() => router.push("/dashboard")}>
-          Home
-        </Button>
+        <Link href="/dashboard" passHref>
+          <Button color="inherit">Home</Button>
+        </Link>
       </Toolbar>
     </AppBar>
   );
-};
+}
 
 export default function Timetable() {
+  const { data: session, status } = useSession();
+  const router = useRouter();
+
   const [timetable, setTimetable] = useState([]);
   const [programmeData, setProgrammeData] = useState([]);
   const [selectedProgramme, setSelectedProgramme] = useState("");
   const [refresh, setRefresh] = useState(Date.now());
 
-  // New event state – date and time are stored as Date objects
   const [newEvent, setNewEvent] = useState({
     programme: "",
     course: "",
@@ -52,79 +61,100 @@ export default function Timetable() {
     date: null,
     time: null,
     group: "",
-    room: "",
+    room: ""
   });
 
-  // 1. Fetch programme data from /api/programmeData
+  // Redirect if not authenticated
   useEffect(() => {
-    fetch("/api/programmeData")
-      .then((res) => res.json())
-      .then((data) => {
-        if (data.success) {
-          setProgrammeData(data.data);
-          if (data.data.length > 0) {
-            const initialProgramme = data.data[0];
-            setSelectedProgramme(initialProgramme.name);
-            setNewEvent((prev) => ({
-              ...prev,
-              programme: initialProgramme.name,
-              course: initialProgramme.courses[0] || "",
-            }));
-          }
-        } else {
-          console.error("Failed to load programme data");
-        }
-      })
-      .catch((error) => console.error("Error fetching programme data:", error));
-  }, []);
+    if (status === "loading") return;
+    if (!session) {
+      console.log("No session found, calling signIn()");
+      signIn(); // Trigger NextAuth signIn to refresh the session
+    }
+  }, [session, status]);
 
-  // 2. Fetch timetable events whenever the selected programme changes
+  // Fetch programme data (only if user is logged in)
   useEffect(() => {
+    if (!session) return;
+    fetchProgrammeData();
+  }, [session]);
+
+  // Fetch timetable when selectedProgramme or session changes
+  useEffect(() => {
+    if (!session) return;
     fetchTimetable();
-  }, [selectedProgramme]);
+  }, [selectedProgramme, session]);
 
-  const fetchTimetable = () => {
-    fetch("/api/timetable")
-      .then((res) => res.json())
-      .then((data) => {
-        setTimetable(data.data || []);
-      })
-      .catch((error) => console.error("Error fetching timetable:", error));
+  const fetchTimetable = async () => {
+    try {
+      const res = await fetch("/api/timetable", {
+        method: "GET",
+        credentials: "include", // Ensure cookies are sent
+        headers: { "Content-Type": "application/json" }
+      });
+      const data = await res.json();
+      if (data.success) {
+        console.log("Timetable fetch success:", data.data);
+        setTimetable(data.data);
+      } else {
+        console.error("❌ Error fetching timetable:", data.error);
+      }
+    } catch (error) {
+      console.error("❌ Fetch Error:", error);
+    }
   };
 
-  // 3. Filter events by the selected programme
-  const filteredEvents = Array.isArray(timetable)
-    ? timetable.filter((entry) => entry.programme === selectedProgramme)
-    : [];
+  const fetchProgrammeData = async () => {
+    try {
+      const res = await fetch("/api/programmeData");
+      const data = await res.json();
+      if (data.success) {
+        console.log("Fetched programmes:", data.data);
+        setProgrammeData(data.data);
+        if (data.data.length > 0) {
+          const initialProgramme = data.data[0];
+          setSelectedProgramme(initialProgramme.name);
+          setNewEvent((prev) => ({
+            ...prev,
+            programme: initialProgramme.name,
+            course: (initialProgramme.courses && initialProgramme.courses[0]) || ""
+          }));
+        }
+      } else {
+        console.error("Error loading programme data:", data.error);
+      }
+    } catch (error) {
+      console.error("Error fetching programme data:", error);
+    }
+  };
 
-  // Handle programme dropdown change
-  const handleProgrammeChange = (event) => {
-    const programmeName = event.target.value;
+  const handleProgrammeChange = (e) => {
+    const programmeName = e.target.value;
     setSelectedProgramme(programmeName);
-    const currentProgramme = programmeData.find(
-      (prog) => prog.name === programmeName
-    );
+    const currentProgramme = programmeData.find((prog) => prog.name === programmeName);
     setNewEvent((prev) => ({
       ...prev,
       programme: programmeName,
-      course:
-        currentProgramme && currentProgramme.courses.length > 0
-          ? currentProgramme.courses[0]
-          : "",
+      course: currentProgramme?.courses?.length > 0 ? currentProgramme.courses[0] : ""
     }));
     setRefresh(Date.now());
   };
 
-  // Handle form field changes for newEvent
   const handleNewEventChange = (e) => {
-    setNewEvent({
-      ...newEvent,
-      [e.target.name]: e.target.value,
-    });
+    setNewEvent({ ...newEvent, [e.target.name]: e.target.value });
   };
 
-  // Combine date/time and submit new event
-  const handleSubmitEvent = () => {
+  const handleSubmitEvent = async () => {
+    if (!session || !session.user?.id) {
+      alert("Error: User not logged in.");
+      return;
+    }
+    if (!newEvent.course || !newEvent.lecturer || !newEvent.room || !newEvent.date || !newEvent.time || !newEvent.group) {
+      alert("All fields are required!");
+      return;
+    }
+
+    // Combine date and time into a Date object
     const combinedDateTime =
       newEvent.date && newEvent.time
         ? new Date(
@@ -139,35 +169,41 @@ export default function Timetable() {
 
     const eventToSubmit = {
       ...newEvent,
-      fullDateTime: combinedDateTime,
+      fullDateTime: combinedDateTime
     };
+    console.log("Adding New Entry:", eventToSubmit);
 
-    fetch("/api/timetable", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(eventToSubmit),
-    })
-      .then((res) => res.json())
-      .then((data) => {
-        if (data.success) {
-          fetchTimetable();
-          // Reset some fields
-          setNewEvent((prev) => ({
-            ...prev,
-            lecturer: "",
-            date: null,
-            time: null,
-            group: "",
-            room: "",
-          }));
-        } else {
-          console.error("Failed to add event:", data.error);
-        }
-      })
-      .catch((error) => {
-        console.error("Error adding event:", error);
+    try {
+      const res = await fetch("/api/timetable", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include", // Ensure cookies are sent
+        body: JSON.stringify(eventToSubmit)
       });
+      const data = await res.json();
+      if (data.success) {
+        console.log("Entry added successfully:", data.entry);
+        // Reset fields except course (keep course selection)
+        setNewEvent((prev) => ({
+          ...prev,
+          lecturer: "",
+          room: "",
+          date: null,
+          time: null,
+          group: ""
+        }));
+        fetchTimetable();
+      } else {
+        console.error("Failed to add entry:", data.error);
+      }
+    } catch (error) {
+      console.error("Error adding entry:", error);
+    }
   };
+
+  if (status === "loading" || !session) {
+    return <Typography sx={{ textAlign: "center", p: 4 }}>Loading...</Typography>;
+  }
 
   return (
     <Container maxWidth="xl" sx={{ mt: 5 }}>
@@ -180,7 +216,7 @@ export default function Timetable() {
           </Typography>
           <FormControl fullWidth sx={{ mt: 2 }}>
             <InputLabel>Programme</InputLabel>
-            <Select value={selectedProgramme} onChange={handleProgrammeChange}>
+            <Select value={selectedProgramme} onChange={handleProgrammeChange} label="Programme">
               {programmeData.map((prog) => (
                 <MenuItem key={prog.name} value={prog.name}>
                   {prog.name}
@@ -196,23 +232,24 @@ export default function Timetable() {
             <FormControl fullWidth sx={{ mt: 2 }}>
               <InputLabel>Course</InputLabel>
               <Select
-                name="course"
                 value={newEvent.course}
-                onChange={handleNewEventChange}
+                onChange={(e) => setNewEvent({ ...newEvent, course: e.target.value })}
+                label="Course"
+                name="course"
               >
-                {(() => {
-                  const currentProgramme = programmeData.find(
-                    (prog) => prog.name === selectedProgramme
-                  );
-                  const courses = currentProgramme
-                    ? currentProgramme.courses
-                    : [];
-                  return courses.map((course) => (
-                    <MenuItem key={course} value={course}>
-                      {course}
-                    </MenuItem>
-                  ));
-                })()}
+                {programmeData.length > 0 ? (
+                  programmeData.flatMap((programme) =>
+                    (programme.courses || []).map((course) => (
+                      <MenuItem key={course} value={course}>
+                        {course}
+                      </MenuItem>
+                    ))
+                  )
+                ) : (
+                  <MenuItem value="">
+                    <em>No courses available</em>
+                  </MenuItem>
+                )}
               </Select>
             </FormControl>
             <TextField
@@ -223,28 +260,14 @@ export default function Timetable() {
               value={newEvent.lecturer}
               onChange={handleNewEventChange}
             />
-            <LocalizationProvider dateAdapter={AdapterDateFns}>
-              <DatePicker
-                label="Date"
-                value={newEvent.date}
-                onChange={(newValue) =>
-                  setNewEvent((prev) => ({ ...prev, date: newValue }))
-                }
-                renderInput={(params) => (
-                  <TextField {...params} fullWidth margin="dense" />
-                )}
-              />
-              <TimePicker
-                label="Start Time"
-                value={newEvent.time}
-                onChange={(newValue) =>
-                  setNewEvent((prev) => ({ ...prev, time: newValue }))
-                }
-                renderInput={(params) => (
-                  <TextField {...params} fullWidth margin="dense" />
-                )}
-              />
-            </LocalizationProvider>
+            <TextField
+              margin="dense"
+              name="room"
+              label="Room Number"
+              fullWidth
+              value={newEvent.room}
+              onChange={handleNewEventChange}
+            />
             <TextField
               margin="dense"
               name="group"
@@ -253,29 +276,32 @@ export default function Timetable() {
               value={newEvent.group}
               onChange={handleNewEventChange}
             />
-            <TextField
-              margin="dense"
-              name="room"
-              label="Room"
-              fullWidth
-              value={newEvent.room}
-              onChange={handleNewEventChange}
-            />
-            <Box mt={2}>
-              <Button variant="contained" fullWidth onClick={handleSubmitEvent}>
-                Add Event
-              </Button>
-            </Box>
+            <LocalizationProvider dateAdapter={AdapterDateFns}>
+              <DatePicker
+                label="Select Date"
+                value={newEvent.date}
+                onChange={(val) => setNewEvent({ ...newEvent, date: val })}
+                renderInput={(params) => <TextField {...params} fullWidth margin="dense" />}
+              />
+              <TimePicker
+                label="Select Time"
+                value={newEvent.time}
+                onChange={(val) => setNewEvent({ ...newEvent, time: val })}
+                renderInput={(params) => <TextField {...params} fullWidth margin="dense" />}
+              />
+            </LocalizationProvider>
+            <Button variant="contained" fullWidth sx={{ mt: 2 }} onClick={handleSubmitEvent}>
+              Add Schedule
+            </Button>
           </Box>
         </Grid>
 
-        {/* Right Side: Timetable Display */}
+        {/* Right Side: Timetable Display using CalendarWidget */}
         <Grid item xs={9}>
           <Typography variant="h4" align="center" gutterBottom>
             Weekly Timetable
           </Typography>
-          {/* Use the new CalendarWidget here */}
-          <CalendarWidget events={filteredEvents} refresh={refresh} />
+          <CalendarWidget events={timetable} refresh={refresh} />
         </Grid>
       </Grid>
     </Container>

@@ -1,12 +1,11 @@
-// src/app/layout.js
-import ClientAuthProviderWrapper from "../components/ClientAuthProviderWrapper";
+import Providers from "./providers"; // ✅ Ensure SessionProvider is here
+import { CssBaseline, Box, Toolbar } from "@mui/material";
 import Sidebar from "../components/Sidebar";
 import TopNav from "../components/TopNav";
-import { CssBaseline, Box, Toolbar } from "@mui/material";
 
 export const metadata = {
   title: "Course Connect",
-  description: "University Timetable Application",
+  description: "University Timetable Application"
 };
 
 export default function RootLayout({ children }) {
@@ -15,16 +14,16 @@ export default function RootLayout({ children }) {
       <head>{/* global head elements */}</head>
       <body>
         <CssBaseline />
-        <ClientAuthProviderWrapper>
+        <Providers> {/* ✅ Wrap Everything in SessionProvider */}
           <Box sx={{ display: "flex" }}>
             <Sidebar />
             <Box sx={{ flexGrow: 1 }}>
               <TopNav />
-              <Toolbar /> {/* Reserve space for fixed TopNav */}
+              <Toolbar />
               {children}
             </Box>
           </Box>
-        </ClientAuthProviderWrapper>
+        </Providers>
       </body>
     </html>
   );

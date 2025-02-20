@@ -1,7 +1,9 @@
 "use client";
 
 import Link from "next/link";
-import { useAuth } from "../../context/AuthContext";
+import { Table, TableHead, TableRow, TableCell, TableBody, TableContainer } from "@mui/material";
+
+import { useSession, signOut } from "next-auth/react";
 import { useState, useEffect } from "react";
 import {
   Box,
@@ -17,7 +19,7 @@ import {
   ListItemText,
   Grid,
   Paper,
-  Button,
+  Button
 } from "@mui/material";
 import {
   Home,
@@ -30,45 +32,57 @@ import {
   Help,
   Settings,
   Search,
-  Notifications,
+  Notifications
 } from "@mui/icons-material";
+import { useRouter } from "next/navigation";
 import CalendarWidget from "../../components/CalendarWidget";
 
 const drawerWidth = 240;
 
 export default function CourseConnectDashboard() {
-  // Get the current user from AuthContext
-  const { user } = useAuth();
-  const userName = user ? user.name : "Guest";
-
-  // Dummy timetable events state – in a real app, fetch from your backend
+  const { data: session, status } = useSession();
+  const router = useRouter();
   const [timetable, setTimetable] = useState([]);
-  // Refresh trigger for CalendarWidget
-  const [refresh, setRefresh] = useState(Date.now());
 
-  // Dummy fetch function – replace with actual API call as needed
-  const fetchTimetable = () => {
-    fetch("/api/timetable")
-      .then((res) => res.json())
-      .then((data) => {
-        setTimetable(data.data || []);
-      })
-      .catch((error) => console.error("Error fetching timetable:", error));
+  // Always run this effect to handle redirection if not authenticated
+  useEffect(() => {
+    if (status !== "loading" && !session) {
+      router.push("/login");
+    }
+  }, [session, status, router]);
+
+  // Always run this effect to fetch timetable if a session exists
+  useEffect(() => {
+    if (session) {
+      fetchTimetable();
+    }
+  }, [session]);
+
+  const fetchTimetable = async () => {
+    try {
+      const res = await fetch("/api/timetable", {
+        method: "GET",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" }
+      });
+      const data = await res.json();
+      if (data.success) {
+        setTimetable(data.data);
+      } else {
+        console.error("❌ Error fetching timetable:", data.error);
+      }
+    } catch (error) {
+      console.error("❌ Fetch Error:", error);
+    }
   };
 
-  // Initially fetch timetable events on component mount
-  useEffect(() => {
-    fetchTimetable();
-  }, []);
-
-  // For this example, assume the dashboard shows events for "TU860 YR3"
-  const filteredEvents = timetable.filter(
-    (entry) => entry.programme === "TU860 YR3"
-  );
+  // Even if there's no session, we still call all hooks in order
+  const userName = session?.user?.email || "Guest";
 
   return (
     <Box sx={{ display: "flex" }}>
       <CssBaseline />
+
       {/* Sidebar */}
       <Drawer
         variant="permanent"
@@ -79,8 +93,8 @@ export default function CourseConnectDashboard() {
             width: drawerWidth,
             boxSizing: "border-box",
             backgroundColor: "#2D2D3A",
-            color: "white",
-          },
+            color: "white"
+          }
         }}
       >
         <Toolbar />
@@ -95,7 +109,7 @@ export default function CourseConnectDashboard() {
             "Archive",
             "Calendar",
             "Help Center",
-            "Settings",
+            "Settings"
           ].map((text, index) => (
             <ListItem
               key={text}
@@ -147,7 +161,7 @@ export default function CourseConnectDashboard() {
             width: `calc(100% - ${drawerWidth}px)`,
             ml: `${drawerWidth}px`,
             backgroundColor: "white",
-            color: "black",
+            color: "black"
           }}
         >
           <Toolbar>
@@ -163,13 +177,15 @@ export default function CourseConnectDashboard() {
             <Typography variant="body1" sx={{ ml: 2 }}>
               {userName}
             </Typography>
+            <Button color="secondary" onClick={() => signOut({ callbackUrl: "/login" })} sx={{ ml: 2 }}>
+              Sign Out
+            </Button>
           </Toolbar>
         </AppBar>
         <Toolbar />
 
         {/* Dashboard Content */}
         <Box sx={{ mt: 2 }}>
-          {/* Welcome & Subheading */}
           <Typography variant="h5" gutterBottom>
             Welcome, {userName}!
           </Typography>
@@ -179,104 +195,78 @@ export default function CourseConnectDashboard() {
 
           {/* Main Grid Layout */}
           <Grid container spacing={3}>
-            {/* Top Row: Urgent Tasks & Uncomplete Flashcards */}
-            <Grid item xs={12}>
-              <Grid container spacing={3}>
-                {/* Urgent Tasks */}
-                <Grid item xs={12} md={6}>
-                  <Paper
-                    elevation={3}
-                    sx={{ p: 2, backgroundColor: "#F5F5F5", height: "100%" }}
-                  >
-                    <Typography variant="h6" sx={{ mb: 2 }}>
-                      Urgent Tasks
-                    </Typography>
-                    <Typography variant="body1" sx={{ mb: 1 }}>
-                      Finish OOP Project Work{" "}
-                      <Typography component="span" color="secondary">
-                        • Today
-                      </Typography>
-                    </Typography>
-                    <Typography variant="body1" sx={{ mb: 1 }}>
-                      Major Group Diary{" "}
-                      <Typography component="span" color="secondary">
-                        • Today
-                      </Typography>
-                    </Typography>
-                    <Typography variant="body1">
-                      CA 2 Revision{" "}
-                      <Typography component="span" color="secondary">
-                        • Today
-                      </Typography>
-                    </Typography>
-                  </Paper>
-                </Grid>
-                {/* Uncomplete Flashcards */}
-                <Grid item xs={12} md={6}>
-                  <Paper
-                    elevation={3}
-                    sx={{ p: 2, backgroundColor: "#F5F5F5", height: "100%" }}
-                  >
-                    <Typography variant="h6" sx={{ mb: 2 }}>
-                      Uncomplete Flashcards
-                    </Typography>
-                    <Box sx={{ display: "flex", gap: 2, flexWrap: "wrap" }}>
-                      <Paper
-                        sx={{
-                          p: 1,
-                          minWidth: "100px",
-                          backgroundColor: "#F2E7FE",
-                          cursor: "pointer",
-                        }}
-                      >
-                        <Typography>#Research</Typography>
-                      </Paper>
-                      <Paper
-                        sx={{
-                          p: 1,
-                          minWidth: "100px",
-                          backgroundColor: "#E3FCEF",
-                          cursor: "pointer",
-                        }}
-                      >
-                        <Typography>#SWOT analysis</Typography>
-                      </Paper>
-                      <Paper
-                        sx={{
-                          p: 1,
-                          minWidth: "100px",
-                          backgroundColor: "#FFF5DA",
-                          cursor: "pointer",
-                        }}
-                      >
-                        <Typography>#Operations</Typography>
-                      </Paper>
-                      <Paper
-                        sx={{
-                          p: 1,
-                          minWidth: "100px",
-                          backgroundColor: "#FFDCE5",
-                          cursor: "pointer",
-                        }}
-                      >
-                        <Typography>#Strategy design</Typography>
-                      </Paper>
-                    </Box>
-                  </Paper>
-                </Grid>
-              </Grid>
+            {/* Urgent Tasks */}
+            <Grid item xs={12} md={6}>
+              <Paper
+                elevation={3}
+                sx={{ p: 2, backgroundColor: "#F5F5F5", height: "100%" }}
+              >
+                <Typography variant="h6" sx={{ mb: 2 }}>
+                  Urgent Tasks
+                </Typography>
+                <Typography variant="body1" sx={{ mb: 1 }}>
+                  Finish OOP Project Work{" "}
+                  <Typography component="span" color="secondary">
+                    • Today
+                  </Typography>
+                </Typography>
+                <Typography variant="body1" sx={{ mb: 1 }}>
+                  Major Group Diary{" "}
+                  <Typography component="span" color="secondary">
+                    • Today
+                  </Typography>
+                </Typography>
+              </Paper>
             </Grid>
 
-            {/* Second Row: Calendar Section */}
+            {/* Weekly Calendar */}
+            <Grid item xs={12} md={6}>
+              <Paper
+                elevation={3}
+                sx={{ p: 2, backgroundColor: "#F5F5F5", height: "100%" }}
+              >
+                <Typography variant="h6" sx={{ mb: 2 }}>
+                  Weekly Calendar
+                </Typography>
+                <CalendarWidget events={timetable} />
+              </Paper>
+            </Grid>
+
+            {/* Timetable Table */}
             <Grid item xs={12}>
               <Paper
                 elevation={3}
                 sx={{ p: 2, backgroundColor: "#F5F5F5", mt: 2 }}
               >
                 <Typography variant="h6" sx={{ mb: 2 }}>
-                  Your Weekly Calendar
+                  Your Timetable
                 </Typography>
-                <CalendarWidget events={filteredEvents} refresh={refresh} />
+                <Table>
+                  <TableHead sx={{ backgroundColor: "#1976D2" }}>
+                    <TableRow>
+                      <TableCell sx={{ color: "white", fontWeight: "bold" }}>ID</TableCell>
+                      <TableCell sx={{ color: "white", fontWeight: "bold" }}>Course</TableCell>
+                      <TableCell sx={{ color: "white", fontWeight: "bold" }}>Lecturer</TableCell>
+                      <TableCell sx={{ color: "white", fontWeight: "bold" }}>Room</TableCell>
+                      <TableCell sx={{ color: "white", fontWeight: "bold" }}>Date</TableCell>
+                      <TableCell sx={{ color: "white", fontWeight: "bold" }}>Time</TableCell>
+                      <TableCell sx={{ color: "white", fontWeight: "bold" }}>Recurring</TableCell>
+                    </TableRow>
+                  </TableHead>
+                  <TableBody>
+                    {timetable.map((entry) => (
+                      <TableRow key={entry._id}>
+                        <TableCell>{entry._id}</TableCell>
+                        <TableCell>{entry.course}</TableCell>
+                        <TableCell>{entry.lecturer}</TableCell>
+                        <TableCell>{entry.room}</TableCell>
+                        <TableCell>{entry.date}</TableCell>
+                        <TableCell>{entry.time}</TableCell>
+                        <TableCell>{entry.recurring ? "Yes" : "No"}</TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
               </Paper>
             </Grid>
           </Grid>
