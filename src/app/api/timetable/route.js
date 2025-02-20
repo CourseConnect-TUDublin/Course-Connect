@@ -1,32 +1,72 @@
-// src/app/api/timetable/route.js
-import { connectToDatabase } from '../../../lib/dbConnect.js';
-import Timetable from '../../../models/Timetable.js';
+import { NextResponse } from "next/server";
+import { getToken } from "next-auth/jwt";
+import { connectToDatabase } from "../../../lib/dbConnect";
+import Timetable from "../../../models/Timetable";
 
-export async function GET(req) {
+const secret = process.env.NEXTAUTH_SECRET;
+
+export async function GET(request) {
   try {
-    const conn = await connectToDatabase();
-    console.log("Mongoose connection readyState:", conn.connection.readyState); // Should be 1 for connected
+    await connectToDatabase();
 
-    const entries = await Timetable.find();
-    return new Response(
-      JSON.stringify({ success: true, data: entries }),
-      { status: 200, headers: { "Content-Type": "application/json" } }
-    );
+    // Log the incoming cookie header for debugging
+    const cookieHeader = request.headers.get("cookie");
+    console.log("Cookie header in GET:", cookieHeader);
+
+    // Try to extract the token; specify cookieName in case the default is different
+    const token = await getToken({ 
+      req: request, 
+      secret, 
+      cookieName: "next-auth.session-token" // adjust if you're using a custom name
+    });
+    console.log("Token in GET:", token);
+
+    if (!token || !token.id) {
+      console.error("Unauthorized - No token found");
+      return NextResponse.json({ success: false, error: "Unauthorized" }, { status: 401 });
+    }
+
+    const userId = token.id;
+    console.log("Fetching timetable for user:", userId);
+
+    const entries = await Timetable.find({ userId });
+    console.log("Timetable Entries Found:", entries.length);
+
+    return NextResponse.json({ success: true, data: entries }, { status: 200 });
   } catch (error) {
     console.error("Error fetching timetable:", error);
-    return new Response(
-      JSON.stringify({ success: false, error: "Failed to fetch timetable entries" }),
-      { status: 500, headers: { "Content-Type": "application/json" } }
+    return NextResponse.json(
+      { success: false, error: "Failed to fetch timetable entries", details: error.message },
+      { status: 500 }
     );
   }
 }
 
-export async function POST(req) {
+export async function POST(request) {
   try {
     await connectToDatabase();
-    const body = await req.json();
-    console.log("Received Data from Frontend:", body);
+
+    const cookieHeader = request.headers.get("cookie");
+    console.log("Cookie header in POST:", cookieHeader);
+
+    const token = await getToken({ 
+      req: request, 
+      secret, 
+      cookieName: "next-auth.session-token" 
+    });
+    console.log("Token in POST:", token);
+
+    if (!token || !token.id) {
+      console.error("Unauthorized - No token found");
+      return NextResponse.json({ success: false, error: "Unauthorized" }, { status: 401 });
+    }
+
+    const userId = token.id;
+    const body = await request.json();
+    console.log("Adding schedule for user:", userId, "Data:", body);
+
     const newEntry = new Timetable({
+      userId,
       programme: body.programme,
       course: body.course,
       lecturer: body.lecturer,
@@ -34,16 +74,18 @@ export async function POST(req) {
       fullDateTime: new Date(body.fullDateTime),
       group: body.group,
     });
+
     await newEntry.save();
-    return new Response(
-      JSON.stringify({ success: true, message: "Schedule added successfully", entry: newEntry }),
-      { status: 201, headers: { "Content-Type": "application/json" } }
+
+    return NextResponse.json(
+      { success: true, message: "Schedule added successfully", entry: newEntry },
+      { status: 201 }
     );
   } catch (error) {
     console.error("API Error:", error);
-    return new Response(
-      JSON.stringify({ success: false, error: "Internal Server Error" }),
-      { status: 500, headers: { "Content-Type": "application/json" } }
+    return NextResponse.json(
+      { success: false, error: "Internal Server Error", details: error.message },
+      { status: 500 }
     );
   }
 }

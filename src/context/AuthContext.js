@@ -1,32 +1,25 @@
 "use client";
 
-import { createContext, useContext, useState, useEffect } from "react";
+import { createContext, useContext, useEffect, useState } from "react";
+import { useSession, signIn, signOut } from "next-auth/react";
 
 const AuthContext = createContext();
 
 export function AuthProvider({ children }) {
+  const { data: session, status } = useSession();
   const [user, setUser] = useState(null);
 
-  // For demo purposes, simulate fetching user data (replace with real logic)
+  // ✅ Keep `user` state in sync with NextAuth session
   useEffect(() => {
-    const storedUser = localStorage.getItem("user");
-    if (storedUser) {
-      setUser(JSON.parse(storedUser));
+    if (status === "authenticated" && session?.user) {
+      setUser(session.user);
+    } else {
+      setUser(null);
     }
-  }, []);
-
-  const login = (userData) => {
-    setUser(userData);
-    localStorage.setItem("user", JSON.stringify(userData));
-  };
-
-  const logout = () => {
-    setUser(null);
-    localStorage.removeItem("user");
-  };
+  }, [session, status]);
 
   return (
-    <AuthContext.Provider value={{ user, login, logout }}>
+    <AuthContext.Provider value={{ user, status, signIn, signOut }}>
       {children}
     </AuthContext.Provider>
   );

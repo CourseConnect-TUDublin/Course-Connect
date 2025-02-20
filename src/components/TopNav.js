@@ -1,18 +1,16 @@
-// src/components/TopNav.js
 "use client";
 
 import { useRouter } from "next/navigation";
 import { AppBar, Toolbar, Typography, IconButton, Button } from "@mui/material";
 import { Search, Notifications } from "@mui/icons-material";
-import { useAuth } from "../context/AuthContext";
+import { useSession, signOut } from "next-auth/react"; // ✅ Use NextAuth for authentication
 
 export default function TopNav() {
   const router = useRouter();
-  const { user, logout } = useAuth();
+  const { data: session, status } = useSession(); // ✅ Use NextAuth session
 
   const handleLogout = () => {
-    logout();
-    router.push("/login");
+    signOut({ callbackUrl: "/login" }); // ✅ Properly sign out using NextAuth
   };
 
   const handleSignIn = () => {
@@ -40,9 +38,9 @@ export default function TopNav() {
           <Notifications />
         </IconButton>
         <Typography variant="body1" sx={{ mr: 2 }}>
-          {user ? user.name : "Guest"}
+          {status === "authenticated" ? session.user.email : "Guest"}
         </Typography>
-        {user ? (
+        {status === "authenticated" ? (
           <Button variant="outlined" color="inherit" onClick={handleLogout}>
             Sign Out
           </Button>
