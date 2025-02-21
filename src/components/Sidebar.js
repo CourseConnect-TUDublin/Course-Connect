@@ -15,6 +15,21 @@ import {
 
 const drawerWidth = 240;
 
+// Define your sidebar items here. Adjust routes as needed.
+const sidebarItems = [
+  { label: "Home", route: "/dashboard", icon: <Home /> },
+  { label: "Dashboard", route: "/dashboard", icon: <DashboardIcon /> },
+  { label: "Task Manager", route: "/TaskManager", icon: <Assignment /> }, // Task Manager navigation
+  { label: "Timetable", route: "/timetable", icon: <CalendarToday /> },
+  { label: "Assignments", route: "/assignments", icon: <Assignment /> },
+  { label: "To-Do", route: "/todo", icon: <CheckBox /> },
+  { label: "Study-Buddy", route: "/study-buddy", icon: <People /> },
+  { label: "Chat Room", route: "/chatroom", icon: <Chat /> },
+  { label: "Calendar", route: "/calendar", icon: <CalendarToday /> },
+  { label: "Help Center", route: "/helpcenter", icon: <Help /> },
+  { label: "Settings", route: "/settings", icon: <Settings /> },
+];
+
 export default function Sidebar() {
   return (
     <Drawer
@@ -32,42 +47,17 @@ export default function Sidebar() {
     >
       <Toolbar />
       <List>
-        {[
-          "Home",
-          "Dashboard",
-          "Timetable",
-          "Assignments",
-          "To-Do",
-          "Study-Buddy",
-          "Chat Room",
-          "Calendar",
-          "Help Center",
-          "Settings",
-        ].map((text, index) => (
+        {sidebarItems.map((item) => (
           <ListItem
-            key={text}
+            key={item.label}
             component={Link}
-            href={
-              text === "Home"
-                ? "/dashboard" // Home now redirects to dashboard
-                : text === "Timetable"
-                ? "/timetable"
-                : text.toLowerCase().replace(/\s+/g, "")
-            }
+            href={item.route}
             sx={{ textDecoration: "none", color: "white" }}
           >
             <ListItemIcon sx={{ color: "white" }}>
-              {index === 0 ? <Home /> :
-               index === 1 ? <DashboardIcon /> :
-               index === 2 ? <CalendarToday /> :
-               index === 3 ? <Assignment /> :
-               index === 4 ? <CheckBox /> :
-               index === 5 ? <People /> :
-               index === 6 ? <Chat /> :
-               index === 7 ? <CalendarToday /> :
-               index === 8 ? <Help /> : <Settings />}
+              {item.icon}
             </ListItemIcon>
-            <ListItemText primary={text} />
+            <ListItemText primary={item.label} />
           </ListItem>
         ))}
       </List>

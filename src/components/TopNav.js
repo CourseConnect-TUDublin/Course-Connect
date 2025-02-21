@@ -1,16 +1,22 @@
 "use client";
 
+import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { AppBar, Toolbar, Typography, IconButton, Button } from "@mui/material";
 import { Search, Notifications } from "@mui/icons-material";
-import { useSession, signOut } from "next-auth/react"; // ✅ Use NextAuth for authentication
+import { useSession, signOut } from "next-auth/react";
 
 export default function TopNav() {
   const router = useRouter();
-  const { data: session, status } = useSession(); // ✅ Use NextAuth session
+  const { data: session, status } = useSession();
+
+  // Log session data when it changes
+  useEffect(() => {
+    console.log("TopNav session:", session);
+  }, [session]);
 
   const handleLogout = () => {
-    signOut({ callbackUrl: "/login" }); // ✅ Properly sign out using NextAuth
+    signOut({ callbackUrl: "/login" });
   };
 
   const handleSignIn = () => {

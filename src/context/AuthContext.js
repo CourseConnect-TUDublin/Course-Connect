@@ -1,25 +1,37 @@
+// src/context/AuthContext.js
 "use client";
-
-import { createContext, useContext, useEffect, useState } from "react";
-import { useSession, signIn, signOut } from "next-auth/react";
+import { createContext, useContext, useState, useEffect } from "react";
 
 const AuthContext = createContext();
 
 export function AuthProvider({ children }) {
-  const { data: session, status } = useSession();
   const [user, setUser] = useState(null);
 
-  // ✅ Keep `user` state in sync with NextAuth session
   useEffect(() => {
-    if (status === "authenticated" && session?.user) {
-      setUser(session.user);
+    const storedUser = localStorage.getItem("user");
+    if (storedUser) {
+      const parsedUser = JSON.parse(storedUser);
+      console.log("AuthContext: Loaded user from localStorage:", parsedUser);
+      setUser(parsedUser);
     } else {
-      setUser(null);
+      console.log("AuthContext: No user found in localStorage");
     }
-  }, [session, status]);
+  }, []);
+
+  const login = (userData) => {
+    console.log("AuthContext: Logging in with:", userData);
+    setUser(userData);
+    localStorage.setItem("user", JSON.stringify(userData));
+  };
+
+  const logout = () => {
+    console.log("AuthContext: Logging out");
+    setUser(null);
+    localStorage.removeItem("user");
+  };
 
   return (
-    <AuthContext.Provider value={{ user, status, signIn, signOut }}>
+    <AuthContext.Provider value={{ user, login, logout }}>
       {children}
     </AuthContext.Provider>
   );

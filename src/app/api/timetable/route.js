@@ -1,91 +1,86 @@
-import { NextResponse } from "next/server";
+// /src/app/api/timetable/route.js
+import { connectToDatabase } from '../../../lib/dbConnect.js';
+import Timetable from '../../../models/Timetable.js';
 import { getToken } from "next-auth/jwt";
-import { connectToDatabase } from "../../../lib/dbConnect";
-import Timetable from "../../../models/Timetable";
 
 const secret = process.env.NEXTAUTH_SECRET;
 
-export async function GET(request) {
+export async function GET(req) {
   try {
     await connectToDatabase();
-
-    // Log the incoming cookie header for debugging
-    const cookieHeader = request.headers.get("cookie");
-    console.log("Cookie header in GET:", cookieHeader);
-
-    // Try to extract the token; specify cookieName in case the default is different
-    const token = await getToken({ 
-      req: request, 
-      secret, 
-      cookieName: "next-auth.session-token" // adjust if you're using a custom name
-    });
-    console.log("Token in GET:", token);
-
-    if (!token || !token.id) {
-      console.error("Unauthorized - No token found");
-      return NextResponse.json({ success: false, error: "Unauthorized" }, { status: 401 });
+    const token = await getToken({ req, secret });
+    console.log("Token in GET:", token);  // Log the token to check its structure
+    if (!token) {
+      return new Response(
+        JSON.stringify({ success: false, error: "Unauthorized - No token found" }),
+        { status: 401, headers: { "Content-Type": "application/json" } }
+      );
+    }
+    
+    // Use token.id if available, otherwise use token.sub
+    const userId = token.id || token.sub;
+    if (!userId) {
+      return new Response(
+        JSON.stringify({ success: false, error: "Token missing user id" }),
+        { status: 400, headers: { "Content-Type": "application/json" } }
+      );
     }
 
-    const userId = token.id;
-    console.log("Fetching timetable for user:", userId);
-
+    // Filter timetable entries by userId
     const entries = await Timetable.find({ userId });
-    console.log("Timetable Entries Found:", entries.length);
-
-    return NextResponse.json({ success: true, data: entries }, { status: 200 });
+    return new Response(
+      JSON.stringify({ success: true, data: entries }),
+      { status: 200, headers: { "Content-Type": "application/json" } }
+    );
   } catch (error) {
     console.error("Error fetching timetable:", error);
-    return NextResponse.json(
-      { success: false, error: "Failed to fetch timetable entries", details: error.message },
-      { status: 500 }
+    return new Response(
+      JSON.stringify({ success: false, error: "Failed to fetch timetable entries" }),
+      { status: 500, headers: { "Content-Type": "application/json" } }
     );
   }
 }
 
-export async function POST(request) {
+export async function POST(req) {
   try {
     await connectToDatabase();
-
-    const cookieHeader = request.headers.get("cookie");
-    console.log("Cookie header in POST:", cookieHeader);
-
-    const token = await getToken({ 
-      req: request, 
-      secret, 
-      cookieName: "next-auth.session-token" 
-    });
-    console.log("Token in POST:", token);
-
-    if (!token || !token.id) {
-      console.error("Unauthorized - No token found");
-      return NextResponse.json({ success: false, error: "Unauthorized" }, { status: 401 });
+    const token = await getToken({ req, secret });
+    if (!token) {
+      return new Response(
+        JSON.stringify({ success: false, error: "Unauthorized - No token found" }),
+        { status: 401, headers: { "Content-Type": "application/json" } }
+      );
+    }
+    const body = await req.json();
+    console.log("Received Data from Frontend:", body);
+    
+    const userId = token.id || token.sub;
+    if (!userId) {
+      return new Response(
+        JSON.stringify({ success: false, error: "Missing userId in token" }),
+        { status: 400, headers: { "Content-Type": "application/json" } }
+      );
     }
 
-    const userId = token.id;
-    const body = await request.json();
-    console.log("Adding schedule for user:", userId, "Data:", body);
-
     const newEntry = new Timetable({
-      userId,
       programme: body.programme,
       course: body.course,
       lecturer: body.lecturer,
       room: body.room,
       fullDateTime: new Date(body.fullDateTime),
       group: body.group,
+      userId: userId, // Associate the entry with the logged-in user
     });
-
     await newEntry.save();
-
-    return NextResponse.json(
-      { success: true, message: "Schedule added successfully", entry: newEntry },
-      { status: 201 }
+    return new Response(
+      JSON.stringify({ success: true, message: "Schedule added successfully", entry: newEntry }),
+      { status: 201, headers: { "Content-Type": "application/json" } }
     );
   } catch (error) {
     console.error("API Error:", error);
-    return NextResponse.json(
-      { success: false, error: "Internal Server Error", details: error.message },
-      { status: 500 }
+    return new Response(
+      JSON.stringify({ success: false, error: "Internal Server Error" }),
+      { status: 500, headers: { "Content-Type": "application/json" } }
     );
   }
 }
