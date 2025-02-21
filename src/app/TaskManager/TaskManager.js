@@ -44,7 +44,6 @@ const TaskManager = () => {
   }, [session, status]);
 
   // Fetch tasks from the API, filtering by userId.
-  // IMPORTANT: Make sure your Task model (backend) includes a "userId" field.
   useEffect(() => {
     if (!session) return; // Wait until session is loaded
     const fetchTasks = async () => {
@@ -100,7 +99,7 @@ const TaskManager = () => {
     if (!newTask.title.trim() || !newTask.dueDate) return;
 
     // Build payload with userId from session
-    const payload = { ...newTask, userId: session.user.id, completed: false };
+    const payload = { ...newTask, userId: session.user.id, completed: false, archived: false };
     console.log("Creating task with payload:", payload);
 
     // POST to API
@@ -133,8 +132,8 @@ const TaskManager = () => {
     }
   };
 
-  // Mark task as complete using local state update (update API similarly with a PUT request)
-  const markTaskComplete = async (id) => {
+  // Mark task as complete using local state update
+  const handleTaskComplete = async (id) => {
     setTasks(
       tasks.map((task) =>
         task.id === id || task._id === id ? { ...task, completed: !task.completed } : task
@@ -142,31 +141,77 @@ const TaskManager = () => {
     );
   };
 
-  // Archive task: update local state and optionally call DELETE/PUT endpoint
+  // Archive task: move task from active to archived, ensuring no duplicates.
   const archiveTask = async (id) => {
     const taskToArchive = tasks.find((task) => task.id === id || task._id === id);
     if (taskToArchive) {
-      setArchivedTasks([...archivedTasks, taskToArchive]);
-      setTasks(tasks.filter((task) => (task.id || task._id) !== id));
+      // Prevent duplicates in archivedTasks
+      if (!archivedTasks.some((task) => (task.id || task._id) === (taskToArchive.id || taskToArchive._id))) {
+        setArchivedTasks([...archivedTasks, taskToArchive]);
+      }
+      // Remove from active tasks
+      setTasks(tasks.filter((task) => (task.id || task._id) !== (taskToArchive.id || taskToArchive._id)));
     }
   };
 
+  // Restore task: move task from archived back to active tasks, checking for duplicates.
   const restoreTask = async (id) => {
     const taskToRestore = archivedTasks.find((task) => task.id === id || task._id === id);
     if (taskToRestore) {
-      setTasks([...tasks, taskToRestore]);
-      setArchivedTasks(archivedTasks.filter((task) => (task.id || task._id) !== id));
+      // Prevent duplicates in active tasks
+      if (!tasks.some((task) => (task.id || task._id) === (taskToRestore.id || taskToRestore._id))) {
+        setTasks([...tasks, taskToRestore]);
+      }
+      setArchivedTasks(archivedTasks.filter((task) => (task.id || task._id) !== (taskToRestore.id || taskToRestore._id)));
     }
   };
 
   // Edit task: update local state and optionally call API with PUT request.
   const editTask = async (id, updatedTask) => {
-    setTasks(
-      tasks.map((task) =>
-        task.id === id || task._id === id ? { ...task, ...updatedTask } : task
-      )
-    );
-    toast.success("Task updated successfully!");
+    try {
+      const res = await fetch("/api/tasks", {
+        method: "PUT",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id, ...updatedTask }),
+      });
+      const result = await res.json();
+      if (result.success) {
+        setTasks(
+          tasks.map((task) =>
+            task.id === id || task._id === id ? result.data : task
+          )
+        );
+        toast.success("Task updated successfully!");
+      } else {
+        toast.error("Failed to update task: " + result.error);
+      }
+    } catch (error) {
+      console.error("Error updating task:", error);
+      toast.error("Error updating task");
+    }
+  };
+
+  // Delete task: remove task from the database and state.
+  const deleteTask = async (id) => {
+    try {
+      const res = await fetch("/api/tasks", {
+        method: "DELETE",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id }),
+      });
+      const result = await res.json();
+      if (result.success) {
+        setTasks(tasks.filter((task) => task.id !== id && task._id !== id));
+        toast.success("Task deleted successfully!");
+      } else {
+        toast.error("Failed to delete task: " + result.error);
+      }
+    } catch (error) {
+      console.error("Error deleting task:", error);
+      toast.error("Error deleting task");
+    }
   };
 
   const shareTask = (id) => {
@@ -268,10 +313,11 @@ const TaskManager = () => {
                 <TaskCard
                   key={task.id || task._id || index}
                   task={task}
-                  onComplete={markTaskComplete}
+                  onComplete={handleTaskComplete}
                   onArchive={archiveTask}
                   onEdit={editTask}
                   onShare={shareTask}
+                  onDelete={deleteTask}
                 />
               ))}
             </div>
