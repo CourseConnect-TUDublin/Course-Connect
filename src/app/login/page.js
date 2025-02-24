@@ -1,111 +1,72 @@
 "use client";
 
 import { useState } from "react";
+import { signIn } from "next-auth/react";
 import { useRouter } from "next/navigation";
-import {
-  Container,
-  TextField,
-  Button,
-  Typography,
-  CircularProgress,
-  Alert,
-  Card,
-  CardContent,
-  Box,
-  FormControlLabel,
-  Checkbox,
-} from "@mui/material";
+import { Container, TextField, Button, Typography, Paper, Box, Alert } from "@mui/material";
 
-export default function LoginPage() {
+export default function Login() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
-  const [rememberMe, setRememberMe] = useState(false);
   const router = useRouter();
 
-  const handleLogin = async () => {
-    setLoading(true);
+  const handleSubmit = async (e) => {
+    e.preventDefault();
     setError("");
 
-    try {
-      const response = await fetch("/api/login", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, password }),
-      });
+    const result = await signIn("credentials", {
+      redirect: false,
+      email,
+      password
+    });
 
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.message || "Login failed");
-      }
-
-      // Save token (if needed)
-      localStorage.setItem("authToken", data.token);
-
-      // Redirect after login
+    if (result?.error) {
+      setError("Invalid email or password.");
+    } else {
       router.push("/dashboard");
-    } catch (err) {
-      setError(err.message);
-    } finally {
-      setLoading(false);
     }
   };
 
   return (
-    <Container maxWidth="xs" sx={{ mt: 10, display: "flex", justifyContent: "center" }}>
-      <Card sx={{ width: "100%", boxShadow: 3, borderRadius: 3 }}>
-        <CardContent>
-          <Typography variant="h4" fontWeight="bold" textAlign="center" gutterBottom>
-            Welcome Back
-          </Typography>
-          <Typography variant="body1" color="text.secondary" textAlign="center" gutterBottom>
-            Login to your account
-          </Typography>
+    <Container component="main" maxWidth="xs">
+      <Paper elevation={6} sx={{ p: 4, mt: 8, display: "flex", flexDirection: "column", alignItems: "center" }}>
+        <Typography variant="h5" sx={{ mb: 2 }}>
+          Login to Course Connect
+        </Typography>
 
-          {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
+        {error && (
+          <Alert severity="error" sx={{ width: "100%", mb: 2 }}>
+            {error}
+          </Alert>
+        )}
 
-          <Box component="form" sx={{ mt: 2 }}>
-            <TextField
-              label="Email"
-              type="email"
-              fullWidth
-              variant="outlined"
-              margin="normal"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-            />
+        <Box component="form" onSubmit={handleSubmit} sx={{ width: "100%", mt: 1 }}>
+          <TextField
+            label="Email Address"
+            variant="outlined"
+            margin="normal"
+            fullWidth
+            required
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+          />
+          <TextField
+            label="Password"
+            type="password"
+            variant="outlined"
+            margin="normal"
+            fullWidth
+            required
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+          />
 
-            <TextField
-              label="Password"
-              type="password"
-              fullWidth
-              variant="outlined"
-              margin="normal"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-            />
-
-            <FormControlLabel
-              control={<Checkbox checked={rememberMe} onChange={() => setRememberMe(!rememberMe)} />}
-              label="Remember Me"
-              sx={{ display: "flex", justifyContent: "start", mt: 1 }}
-            />
-
-            <Button
-              variant="contained"
-              color="primary"
-              fullWidth
-              sx={{ mt: 2, py: 1.5, fontSize: "1rem", fontWeight: "bold" }}
-              onClick={handleLogin}
-              disabled={loading}
-            >
-              {loading ? <CircularProgress size={24} color="inherit" /> : "Login"}
-            </Button>
-          </Box>
-        </CardContent>
-      </Card>
+          <Button type="submit" fullWidth variant="contained" sx={{ mt: 2 }}>
+            Login
+          </Button>
+        </Box>
+      </Paper>
     </Container>
   );
 }

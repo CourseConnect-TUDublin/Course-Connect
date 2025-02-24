@@ -1,16 +1,15 @@
-// src/models/Timetable.js
-import mongoose from "mongoose";
+import mongoose from 'mongoose';
 
 const TimetableSchema = new mongoose.Schema({
-  programme: String,
-  course: String,
-  lecturer: String,
-  room: String,
-  fullDateTime: Date,
-  group: String,
+  programme: { type: String, required: true },
+  course: { type: String, required: true },
+  lecturer: { type: String, required: true },
+  room: { type: String, required: true },
+  fullDateTime: { type: Date, required: true },
+  group: { type: String, required: true },
+  userId: { type: String, required: true },
+  recurring: { type: Boolean, default: false } // This line adds the recurring field
 });
 
-// Prevent model overwrite in development
-const Timetable = mongoose.models.Timetable || mongoose.model("Timetable", TimetableSchema);
-
-export default Timetable;
+export default mongoose.models.Timetable ||
+  mongoose.model('Timetable', TimetableSchema);

@@ -1,287 +1,204 @@
 "use client";
 
-import Link from "next/link";
-import { useAuth } from "../../context/AuthContext";
-import { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import {
-  Box,
   CssBaseline,
-  Drawer,
   AppBar,
   Toolbar,
   Typography,
   IconButton,
-  List,
-  ListItem,
-  ListItemIcon,
-  ListItemText,
+  Button,
+  Box,
   Grid,
   Paper,
-  Button,
 } from "@mui/material";
-import {
-  Home,
-  Dashboard as DashboardIcon,
-  CalendarToday,
-  Assignment,
-  CheckBox,
-  People,
-  Chat,
-  Help,
-  Settings,
-  Search,
-  Notifications,
-} from "@mui/icons-material";
+import { Search, Notifications } from "@mui/icons-material";
+import { useRouter } from "next/navigation";
+import { useSession, signOut } from "next-auth/react";
 import CalendarWidget from "../../components/CalendarWidget";
-
-const drawerWidth = 240;
+import { motion } from "framer-motion";
 
 export default function CourseConnectDashboard() {
-  // Get the current user from AuthContext
-  const { user } = useAuth();
-  const userName = user ? user.name : "Guest";
+  const { data: session, status } = useSession();
+  const router = useRouter();
 
-  // Dummy timetable events state – in a real app, fetch from your backend
+  // State for timetable events and refresh trigger
   const [timetable, setTimetable] = useState([]);
-  // Refresh trigger for CalendarWidget
   const [refresh, setRefresh] = useState(Date.now());
 
-  // Dummy fetch function – replace with actual API call as needed
-  const fetchTimetable = () => {
-    fetch("/api/timetable")
-      .then((res) => res.json())
-      .then((data) => {
-        setTimetable(data.data || []);
-      })
-      .catch((error) => console.error("Error fetching timetable:", error));
-  };
-
-  // Initially fetch timetable events on component mount
+  // Redirect if not authenticated
   useEffect(() => {
-    fetchTimetable();
-  }, []);
+    if (status !== "loading" && !session) {
+      router.push("/login");
+    }
+  }, [session, status, router]);
 
-  // For this example, assume the dashboard shows events for "TU860 YR3"
-  const filteredEvents = timetable.filter(
-    (entry) => entry.programme === "TU860 YR3"
-  );
+  // Define fetchTimetable with useCallback for stable dependencies
+  const fetchTimetable = useCallback(async () => {
+    try {
+      const userId = session?.user?.id || session?.user?.sub;
+      const res = await fetch(`/api/timetable?userId=${userId}`, {
+        method: "GET",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+      });
+      const data = await res.json();
+      if (data.success) {
+        setTimetable(data.data);
+        setRefresh(Date.now());
+      } else {
+        console.error("Error fetching timetable:", data.error);
+      }
+    } catch (error) {
+      console.error("Fetch error:", error);
+    }
+  }, [session]);
+
+  // Fetch timetable data when session exists
+  useEffect(() => {
+    if (session) {
+      fetchTimetable();
+    }
+  }, [session, fetchTimetable]);
+
+  const userName = session?.user?.email || "Guest";
 
   return (
-    <Box sx={{ display: "flex" }}>
-      <CssBaseline />
-      {/* Sidebar */}
-      <Drawer
-        variant="permanent"
-        sx={{
-          width: drawerWidth,
-          flexShrink: 0,
-          [`& .MuiDrawer-paper`]: {
-            width: drawerWidth,
-            boxSizing: "border-box",
-            backgroundColor: "#2D2D3A",
-            color: "white",
-          },
-        }}
-      >
-        <Toolbar />
-        <List>
-          {[
-            "Home",
-            "Dashboard",
-            "Timetable",
-            "Assignments",
-            "To-Do",
-            "Study-Buddy",
-            "Archive",
-            "Calendar",
-            "Help Center",
-            "Settings",
-          ].map((text, index) => (
-            <ListItem
-              key={text}
-              component={Link}
-              href={
-                text === "Home"
-                  ? "/dashboard"
-                  : text === "Timetable"
-                  ? "/timetable"
-                  : text.toLowerCase().replace(/\s+/g, "")
-              }
-              sx={{ textDecoration: "none", color: "white" }}
-            >
-              <ListItemIcon sx={{ color: "white" }}>
-                {index === 0 ? (
-                  <Home />
-                ) : index === 1 ? (
-                  <DashboardIcon />
-                ) : index === 2 ? (
-                  <CalendarToday />
-                ) : index === 3 ? (
-                  <Assignment />
-                ) : index === 4 ? (
-                  <CheckBox />
-                ) : index === 5 ? (
-                  <People />
-                ) : index === 6 ? (
-                  <Chat />
-                ) : index === 7 ? (
-                  <CalendarToday />
-                ) : index === 8 ? (
-                  <Help />
-                ) : (
-                  <Settings />
-                )}
-              </ListItemIcon>
-              <ListItemText primary={text} />
-            </ListItem>
-          ))}
-        </List>
-      </Drawer>
-
-      {/* Main Content */}
-      <Box sx={{ flexGrow: 1, p: 3 }}>
+    <motion.div
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      exit={{ opacity: 0, y: -20 }}
+      transition={{ duration: 0.5, ease: "easeInOut" }}
+    >
+      <Box sx={{ backgroundColor: "#ffffff" }}>
+        <CssBaseline />
         {/* Top Navigation */}
         <AppBar
           position="fixed"
+          elevation={0}
           sx={{
-            width: `calc(100% - ${drawerWidth}px)`,
-            ml: `${drawerWidth}px`,
-            backgroundColor: "white",
-            color: "black",
+            width: "100%",
+            backgroundColor: "#ffffff",
+            color: "#000000",
+            borderBottom: "1px solid #eaeaea",
           }}
         >
-          <Toolbar>
-            <Typography variant="h6" sx={{ flexGrow: 1 }}>
+          <Toolbar sx={{ justifyContent: "space-between" }}>
+            <Typography variant="h6" sx={{ fontWeight: 700 }}>
               Course Connect
             </Typography>
-            <IconButton color="inherit">
-              <Search />
-            </IconButton>
-            <IconButton color="inherit">
-              <Notifications />
-            </IconButton>
-            <Typography variant="body1" sx={{ ml: 2 }}>
-              {userName}
-            </Typography>
+            <Box sx={{ display: "flex", alignItems: "center" }}>
+              <IconButton color="inherit">
+                <Search />
+              </IconButton>
+              <IconButton color="inherit">
+                <Notifications />
+              </IconButton>
+              <Typography variant="body1" sx={{ ml: 2, fontWeight: 500 }}>
+                {userName}
+              </Typography>
+              <Button
+                color="secondary"
+                onClick={() => signOut({ callbackUrl: "/login" })}
+                sx={{ ml: 2, textTransform: "none" }}
+              >
+                Sign Out
+              </Button>
+            </Box>
           </Toolbar>
         </AppBar>
         <Toolbar />
 
-        {/* Dashboard Content */}
-        <Box sx={{ mt: 2 }}>
-          {/* Welcome & Subheading */}
-          <Typography variant="h5" gutterBottom>
+        {/* Main content container */}
+        <Box
+          sx={{
+            maxWidth: 1200,
+            mx: "auto",
+            px: { xs: 2, sm: 3 },
+            py: { xs: 3, sm: 4 },
+          }}
+        >
+          <Typography
+            variant="h4"
+            gutterBottom
+            sx={{ fontWeight: 700, letterSpacing: "-0.5px", mb: 1 }}
+          >
             Welcome, {userName}!
           </Typography>
-          <Typography variant="subtitle1" sx={{ mb: 3 }}>
+          <Typography
+            variant="subtitle1"
+            sx={{ mb: { xs: 2, sm: 3 }, color: "#666666" }}
+          >
             Here is your agenda for today
           </Typography>
 
-          {/* Main Grid Layout */}
-          <Grid container spacing={3}>
-            {/* Top Row: Urgent Tasks & Uncomplete Flashcards */}
-            <Grid item xs={12}>
-              <Grid container spacing={3}>
-                {/* Urgent Tasks */}
-                <Grid item xs={12} md={6}>
-                  <Paper
-                    elevation={3}
-                    sx={{ p: 2, backgroundColor: "#F5F5F5", height: "100%" }}
+          {/* Grid Layout for Widgets */}
+          <Grid container spacing={4}>
+            {/* Urgent Tasks Widget */}
+            <Grid item xs={12} md={6}>
+              <Paper
+                elevation={2}
+                sx={{
+                  p: { xs: 3, sm: 4 },
+                  borderRadius: 2,
+                  backgroundColor: "#fafafa",
+                  transition: "transform 0.3s ease",
+                  "&:hover": { transform: "translateY(-4px)" },
+                }}
+              >
+                <Typography
+                  variant="h6"
+                  sx={{ mb: 2, fontWeight: 600, letterSpacing: "-0.25px" }}
+                >
+                  Urgent Tasks
+                </Typography>
+                <Typography variant="body1" sx={{ mb: 1 }}>
+                  Finish OOP Project Work{" "}
+                  <Typography
+                    component="span"
+                    color="secondary"
+                    sx={{ fontWeight: 500 }}
                   >
-                    <Typography variant="h6" sx={{ mb: 2 }}>
-                      Urgent Tasks
-                    </Typography>
-                    <Typography variant="body1" sx={{ mb: 1 }}>
-                      Finish OOP Project Work{" "}
-                      <Typography component="span" color="secondary">
-                        • Today
-                      </Typography>
-                    </Typography>
-                    <Typography variant="body1" sx={{ mb: 1 }}>
-                      Major Group Diary{" "}
-                      <Typography component="span" color="secondary">
-                        • Today
-                      </Typography>
-                    </Typography>
-                    <Typography variant="body1">
-                      CA 2 Revision{" "}
-                      <Typography component="span" color="secondary">
-                        • Today
-                      </Typography>
-                    </Typography>
-                  </Paper>
-                </Grid>
-                {/* Uncomplete Flashcards */}
-                <Grid item xs={12} md={6}>
-                  <Paper
-                    elevation={3}
-                    sx={{ p: 2, backgroundColor: "#F5F5F5", height: "100%" }}
+                    • Today
+                  </Typography>
+                </Typography>
+                <Typography variant="body1" sx={{ mb: 1 }}>
+                  Major Group Diary{" "}
+                  <Typography
+                    component="span"
+                    color="secondary"
+                    sx={{ fontWeight: 500 }}
                   >
-                    <Typography variant="h6" sx={{ mb: 2 }}>
-                      Uncomplete Flashcards
-                    </Typography>
-                    <Box sx={{ display: "flex", gap: 2, flexWrap: "wrap" }}>
-                      <Paper
-                        sx={{
-                          p: 1,
-                          minWidth: "100px",
-                          backgroundColor: "#F2E7FE",
-                          cursor: "pointer",
-                        }}
-                      >
-                        <Typography>#Research</Typography>
-                      </Paper>
-                      <Paper
-                        sx={{
-                          p: 1,
-                          minWidth: "100px",
-                          backgroundColor: "#E3FCEF",
-                          cursor: "pointer",
-                        }}
-                      >
-                        <Typography>#SWOT analysis</Typography>
-                      </Paper>
-                      <Paper
-                        sx={{
-                          p: 1,
-                          minWidth: "100px",
-                          backgroundColor: "#FFF5DA",
-                          cursor: "pointer",
-                        }}
-                      >
-                        <Typography>#Operations</Typography>
-                      </Paper>
-                      <Paper
-                        sx={{
-                          p: 1,
-                          minWidth: "100px",
-                          backgroundColor: "#FFDCE5",
-                          cursor: "pointer",
-                        }}
-                      >
-                        <Typography>#Strategy design</Typography>
-                      </Paper>
-                    </Box>
-                  </Paper>
-                </Grid>
-              </Grid>
+                    • Today
+                  </Typography>
+                </Typography>
+              </Paper>
             </Grid>
 
-            {/* Second Row: Calendar Section */}
-            <Grid item xs={12}>
+            {/* Weekly Calendar Widget */}
+            <Grid item xs={12} md={6}>
               <Paper
-                elevation={3}
-                sx={{ p: 2, backgroundColor: "#F5F5F5", mt: 2 }}
+                elevation={2}
+                sx={{
+                  p: { xs: 3, sm: 4 },
+                  borderRadius: 2,
+                  backgroundColor: "#fafafa",
+                  transition: "transform 0.3s ease",
+                  "&:hover": { transform: "translateY(-4px)" },
+                }}
               >
-                <Typography variant="h6" sx={{ mb: 2 }}>
-                  Your Weekly Calendar
+                <Typography
+                  variant="h6"
+                  sx={{ mb: 2, fontWeight: 600, letterSpacing: "-0.25px" }}
+                >
+                  Weekly Calendar
                 </Typography>
-                <CalendarWidget events={filteredEvents} refresh={refresh} />
+                <CalendarWidget events={timetable} refresh={refresh} />
               </Paper>
             </Grid>
           </Grid>
         </Box>
       </Box>
-    </Box>
+    </motion.div>
   );
 }
