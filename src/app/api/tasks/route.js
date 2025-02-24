@@ -1,29 +1,20 @@
-// /src/app/api/tasks/route.js
-import dbConnect from "../../../lib/dbConnect.js";
-import Task from "../../../models/Task.js";
+import { connectToDatabase } from '../../../lib/dbConnect.js';
+import Task from '../../../models/Task.js';
+import mongoose from 'mongoose';
 
-// GET tasks: Optionally filter by userId and archived status.
 export async function GET(req) {
   try {
-    await dbConnect();
+    await connectToDatabase();
     const { searchParams } = new URL(req.url);
-    const userId = searchParams.get("userId");
-    const archived = searchParams.get("archived");
-
-    if (!userId) {
-      return new Response(
-        JSON.stringify({ success: false, error: "Missing userId query parameter" }),
-        { status: 400, headers: { "Content-Type": "application/json" } }
-      );
+    const archivedParam = searchParams.get("archived");
+    let filter = {};
+    if (archivedParam === "true") {
+      filter.archived = true;
+    } else {
+      // By default, return only active tasks (not archived)
+      filter.archived = false;
     }
-
-    // Build the query object.
-    const query = { userId };
-    if (archived !== null) {
-      query.archived = archived === "true";
-    }
-
-    const tasks = await Task.find(query);
+    const tasks = await Task.find(filter);
     return new Response(
       JSON.stringify({ success: true, data: tasks }),
       { status: 200, headers: { "Content-Type": "application/json" } }
@@ -31,58 +22,91 @@ export async function GET(req) {
   } catch (error) {
     console.error("Error fetching tasks:", error);
     return new Response(
-      JSON.stringify({ success: false, error: error.message }),
+      JSON.stringify({ success: false, error: "Failed to fetch tasks" }),
       { status: 500, headers: { "Content-Type": "application/json" } }
     );
   }
 }
 
-// POST tasks: Create a new task.
 export async function POST(req) {
   try {
-    await dbConnect();
-    const data = await req.json();
-    // Validate required fields.
-    if (!data.userId || !data.title || !data.dueDate) {
+    await connectToDatabase();
+    const body = await req.json();
+    // Validate required fields...
+    if (!body.userId) {
       return new Response(
-        JSON.stringify({ success: false, error: "Missing required fields" }),
+        JSON.stringify({ success: false, error: "User ID is required" }),
         { status: 400, headers: { "Content-Type": "application/json" } }
       );
     }
-    // Create the new task.
-    const task = await Task.create(data);
+    if (!body.dueDate) {
+      return new Response(
+        JSON.stringify({ success: false, error: "Due date is required" }),
+        { status: 400, headers: { "Content-Type": "application/json" } }
+      );
+    }
+    const dueDate = new Date(body.dueDate);
+    if (isNaN(dueDate.getTime())) {
+      return new Response(
+        JSON.stringify({ success: false, error: "Invalid due date" }),
+        { status: 400, headers: { "Content-Type": "application/json" } }
+      );
+    }
+    if (!mongoose.Types.ObjectId.isValid(body.userId)) {
+      return new Response(
+        JSON.stringify({ success: false, error: "Invalid user ID format" }),
+        { status: 400, headers: { "Content-Type": "application/json" } }
+      );
+    }
+    const userId = new mongoose.Types.ObjectId(body.userId);
+    const newTask = new Task({
+      title: body.title,
+      description: body.description,
+      status: body.status,
+      dueDate: dueDate,
+      userId: userId,
+      order: body.order || 0,
+      priority: body.priority || "Medium",
+      category: body.category || "",
+      subtasks: body.subtasks || [],
+      archived: body.archived || false,
+      recurring: body.recurring || false,
+    });
+    await newTask.save();
     return new Response(
-      JSON.stringify({ success: true, data: task }),
+      JSON.stringify({ success: true, data: newTask }),
       { status: 201, headers: { "Content-Type": "application/json" } }
     );
   } catch (error) {
-    console.error("Error creating task:", error);
+    console.error("Error adding task:", error);
     return new Response(
-      JSON.stringify({ success: false, error: error.message }),
+      JSON.stringify({ success: false, error: "Failed to add task" }),
       { status: 500, headers: { "Content-Type": "application/json" } }
     );
   }
 }
 
-// PUT tasks: Update an existing task (e.g., for archiving or editing).
 export async function PUT(req) {
   try {
-    await dbConnect();
-    const data = await req.json();
-    const { id, ...updateData } = data;
-    if (!id) {
+    await connectToDatabase();
+    const body = await req.json();
+    if (!body._id) {
       return new Response(
-        JSON.stringify({ success: false, error: "Missing task id" }),
+        JSON.stringify({ success: false, error: "Task ID is required" }),
         { status: 400, headers: { "Content-Type": "application/json" } }
       );
     }
-    const updatedTask = await Task.findByIdAndUpdate(id, updateData, { new: true });
-    if (!updatedTask) {
-      return new Response(
-        JSON.stringify({ success: false, error: "Task not found" }),
-        { status: 404, headers: { "Content-Type": "application/json" } }
-      );
+    if (body.dueDate) {
+      const dueDate = new Date(body.dueDate);
+      if (isNaN(dueDate.getTime())) {
+        return new Response(
+          JSON.stringify({ success: false, error: "Invalid due date" }),
+          { status: 400, headers: { "Content-Type": "application/json" } }
+        );
+      }
+      body.dueDate = dueDate;
     }
+    const updatedTask = await Task.findByIdAndUpdate(body._id, body, { new: true });
     return new Response(
       JSON.stringify({ success: true, data: updatedTask }),
       { status: 200, headers: { "Content-Type": "application/json" } }
@@ -90,39 +114,26 @@ export async function PUT(req) {
   } catch (error) {
     console.error("Error updating task:", error);
     return new Response(
-      JSON.stringify({ success: false, error: error.message }),
+      JSON.stringify({ success: false, error: "Failed to update task" }),
       { status: 500, headers: { "Content-Type": "application/json" } }
     );
   }
 }
 
-// DELETE tasks: Remove a task from the database.
 export async function DELETE(req) {
   try {
-    await dbConnect();
-    const data = await req.json();
-    const { id } = data;
-    if (!id) {
-      return new Response(
-        JSON.stringify({ success: false, error: "Missing task id" }),
-        { status: 400, headers: { "Content-Type": "application/json" } }
-      );
-    }
-    const deletedTask = await Task.findByIdAndDelete(id);
-    if (!deletedTask) {
-      return new Response(
-        JSON.stringify({ success: false, error: "Task not found" }),
-        { status: 404, headers: { "Content-Type": "application/json" } }
-      );
-    }
+    await connectToDatabase();
+    const { searchParams } = new URL(req.url);
+    const id = searchParams.get("id");
+    await Task.findByIdAndDelete(id);
     return new Response(
-      JSON.stringify({ success: true, data: deletedTask }),
+      JSON.stringify({ success: true, message: "Task deleted" }),
       { status: 200, headers: { "Content-Type": "application/json" } }
     );
   } catch (error) {
     console.error("Error deleting task:", error);
     return new Response(
-      JSON.stringify({ success: false, error: error.message }),
+      JSON.stringify({ success: false, error: "Failed to delete task" }),
       { status: 500, headers: { "Content-Type": "application/json" } }
     );
   }

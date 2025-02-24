@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import {
   Container,
   Typography,
@@ -14,29 +14,41 @@ import {
   Button,
   TextField,
   Box,
+  Paper,
+  Checkbox,
+  FormControlLabel,
 } from "@mui/material";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useSession, signIn } from "next-auth/react";
-import {
-  DatePicker,
-  TimePicker,
-} from "@mui/x-date-pickers";
+import { DatePicker, TimePicker } from "@mui/x-date-pickers";
 import { AdapterDateFns } from "@mui/x-date-pickers/AdapterDateFns";
 import { LocalizationProvider } from "@mui/x-date-pickers/LocalizationProvider";
 import CalendarWidget from "../../components/CalendarWidget";
 import { toast } from "react-toastify";
+import { motion } from "framer-motion";
 
+// Updated Navbar with modern, minimal design
 function Navbar() {
   const router = useRouter();
   return (
-    <AppBar position="static" sx={{ backgroundColor: "#1565C0" }}>
+    <AppBar 
+      position="static" 
+      sx={{
+        backgroundColor: "#ffffff",
+        borderBottom: "1px solid #eaeaea",
+        boxShadow: "none",
+        mb: 3,
+      }}
+    >
       <Toolbar>
-        <Typography variant="h6" sx={{ flexGrow: 1 }}>
+        <Typography variant="h6" sx={{ flexGrow: 1, fontWeight: 600, color: "#333333" }}>
           TU Dublin - Timetable
         </Typography>
-        <Link href="/dashboard" passHref>
-          <Button color="inherit">Home</Button>
+        <Link href="/dashboard" passHref legacyBehavior>
+          <Button color="primary" sx={{ textTransform: "none" }}>
+            Home
+          </Button>
         </Link>
       </Toolbar>
     </AppBar>
@@ -52,7 +64,7 @@ export default function Timetable() {
   const [selectedProgramme, setSelectedProgramme] = useState("");
   const [refresh, setRefresh] = useState(Date.now());
 
-  // New event state – date and time are stored as Date objects
+  // New event state – date and time stored as Date objects; add recurring flag.
   const [newEvent, setNewEvent] = useState({
     programme: "",
     course: "",
@@ -61,6 +73,7 @@ export default function Timetable() {
     time: null,
     group: "",
     room: "",
+    recurring: false,
   });
 
   // Clear timetable state (client-side)
@@ -109,16 +122,15 @@ export default function Timetable() {
     fetchTimetable();
   }, [selectedProgramme, session]);
 
-  const fetchTimetable = async () => {
-    if (!session) return; // Wait until session is loaded
-    // Use session.user.id if available, otherwise fall back to session.user.sub
+  const fetchTimetable = useCallback(async () => {
+    if (!session) return;
     const userId = session.user.id || session.user.sub;
     const url = `/api/timetable?userId=${userId}`;
     console.log("Fetching timetable from:", url);
     try {
       const res = await fetch(url, {
         method: "GET",
-        credentials: "include", // Send cookies
+        credentials: "include",
         headers: { "Content-Type": "application/json" },
       });
       const data = await res.json();
@@ -131,8 +143,7 @@ export default function Timetable() {
       toast.error("Error fetching timetable data");
       console.error("Error fetching timetable:", error);
     }
-  };
-  
+  }, [session]);
 
   // 3. Filter events by selected programme
   const filteredEvents = Array.isArray(timetable)
@@ -155,12 +166,12 @@ export default function Timetable() {
     setRefresh(Date.now());
   };
 
-  // Handle form field changes for newEvent
+  // Handle form field changes for newEvent (for text inputs)
   const handleNewEventChange = (e) => {
     setNewEvent({ ...newEvent, [e.target.name]: e.target.value });
   };
 
-  // Combine date/time and submit new event, including userId
+  // Combine date/time and submit new event, including userId and recurring flag
   const handleSubmitEvent = async () => {
     if (!session || !session.user?.id) {
       alert("Error: User not logged in.");
@@ -194,7 +205,7 @@ export default function Timetable() {
     const eventToSubmit = {
       ...newEvent,
       fullDateTime: combinedDateTime,
-      userId: session.user.id, // Associate event with the logged-in user
+      userId: session.user.id,
     };
     console.log("Adding New Entry:", eventToSubmit);
 
@@ -208,7 +219,7 @@ export default function Timetable() {
       const data = await res.json();
       if (data.success) {
         console.log("Entry added successfully:", data.entry);
-        // Reset fields except course (keep course selection)
+        // Reset specific fields (retain programme and course)
         setNewEvent((prev) => ({
           ...prev,
           lecturer: "",
@@ -216,6 +227,7 @@ export default function Timetable() {
           time: null,
           group: "",
           room: "",
+          recurring: false, // Reset recurring option
         }));
         fetchTimetable();
       } else {
@@ -235,128 +247,160 @@ export default function Timetable() {
   }
 
   return (
-    <Container maxWidth="xl" sx={{ mt: 5 }}>
-      <Navbar />
-      <Grid container spacing={3}>
-        {/* Left Sidebar: Programme Filter & New Event Form */}
-        <Grid item xs={3}>
-          <Typography variant="h6" gutterBottom>
-            Select Programme
-          </Typography>
-          <FormControl fullWidth sx={{ mt: 2 }}>
-            <InputLabel>Programme</InputLabel>
-            <Select
-              value={selectedProgramme}
-              onChange={handleProgrammeChange}
-              label="Programme"
+    <motion.div
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      exit={{ opacity: 0, y: -20 }}
+      transition={{ duration: 0.5, ease: "easeInOut" }}
+    >
+      <Container maxWidth="xl" sx={{ mt: 5 }}>
+        <Navbar />
+        <Grid container spacing={4}>
+          {/* Left Panel: Programme Filter & New Event Form */}
+          <Grid item xs={12} md={4}>
+            <Paper
+              elevation={3}
+              sx={{
+                p: { xs: 3, sm: 4 },
+                borderRadius: 2,
+                backgroundColor: "#fafafa",
+              }}
             >
-              {programmeData.map((prog) => (
-                <MenuItem key={prog.name} value={prog.name}>
-                  {prog.name}
-                </MenuItem>
-              ))}
-            </Select>
-          </FormControl>
+              <Typography variant="h6" gutterBottom sx={{ mb: 2 }}>
+                Select Programme
+              </Typography>
+              <FormControl fullWidth sx={{ mb: 3 }}>
+                <InputLabel>Programme</InputLabel>
+                <Select
+                  value={selectedProgramme}
+                  onChange={handleProgrammeChange}
+                  label="Programme"
+                >
+                  {programmeData.map((prog) => (
+                    <MenuItem key={prog.name} value={prog.name}>
+                      {prog.name}
+                    </MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
 
-          <Box mt={4}>
-            <Typography variant="h6" gutterBottom>
-              Add New Event
-            </Typography>
-            <FormControl fullWidth sx={{ mt: 2 }}>
-              <InputLabel>Course</InputLabel>
-              <Select
-                name="course"
-                value={newEvent.course}
-                onChange={(e) =>
-                  setNewEvent({ ...newEvent, course: e.target.value })
-                }
-                label="Course"
-              >
-                {programmeData.length > 0 ? (
-                  programmeData.flatMap((programme) =>
-                    (programme.courses || []).map((course) => (
-                      <MenuItem key={course} value={course}>
-                        {course}
-                      </MenuItem>
-                    ))
-                  )
-                ) : (
-                  <MenuItem value="">
-                    <em>No courses available</em>
-                  </MenuItem>
-                )}
-              </Select>
-            </FormControl>
-            <TextField
-              margin="dense"
-              name="lecturer"
-              label="Lecturer"
-              fullWidth
-              value={newEvent.lecturer || ""}
-              onChange={handleNewEventChange}
-            />
-            <TextField
-              margin="dense"
-              name="room"
-              label="Room Number"
-              fullWidth
-              value={newEvent.room || ""}
-              onChange={handleNewEventChange}
-            />
-            <TextField
-              margin="dense"
-              name="group"
-              label="Group"
-              fullWidth
-              value={newEvent.group || ""}
-              onChange={handleNewEventChange}
-            />
-            <LocalizationProvider dateAdapter={AdapterDateFns}>
-              <DatePicker
-                label="Select Date"
-                value={newEvent.date}
-                onChange={(val) =>
-                  setNewEvent((prev) => ({ ...prev, date: val }))
-                }
-                renderInput={(params) => (
-                  <TextField {...params} fullWidth margin="dense" />
-                )}
+              <Typography variant="h6" gutterBottom sx={{ mb: 2 }}>
+                Add New Event
+              </Typography>
+              <FormControl fullWidth sx={{ mb: 2 }}>
+                <InputLabel>Course</InputLabel>
+                <Select
+                  name="course"
+                  value={newEvent.course}
+                  onChange={handleNewEventChange}
+                  label="Course"
+                >
+                  {programmeData.length > 0 ? (
+                    programmeData.flatMap((programme) =>
+                      (programme.courses || []).map((course) => (
+                        <MenuItem key={course} value={course}>
+                          {course}
+                        </MenuItem>
+                      ))
+                    )
+                  ) : (
+                    <MenuItem value="">
+                      <em>No courses available</em>
+                    </MenuItem>
+                  )}
+                </Select>
+              </FormControl>
+
+              <TextField
+                margin="dense"
+                name="lecturer"
+                label="Lecturer"
+                fullWidth
+                value={newEvent.lecturer || ""}
+                onChange={handleNewEventChange}
               />
-              <TimePicker
-                label="Select Time"
-                value={newEvent.time}
-                onChange={(val) =>
-                  setNewEvent((prev) => ({ ...prev, time: val }))
-                }
-                renderInput={(params) => (
-                  <TextField {...params} fullWidth margin="dense" />
-                )}
+              <TextField
+                margin="dense"
+                name="room"
+                label="Room Number"
+                fullWidth
+                value={newEvent.room || ""}
+                onChange={handleNewEventChange}
               />
-            </LocalizationProvider>
-            <Button
-              onClick={clearTimetable}
-              variant="outlined"
-              color="error"
-              sx={{ mt: 2 }}
+              <TextField
+                margin="dense"
+                name="group"
+                label="Group"
+                fullWidth
+                value={newEvent.group || ""}
+                onChange={handleNewEventChange}
+              />
+              <LocalizationProvider dateAdapter={AdapterDateFns}>
+                <DatePicker
+                  label="Select Date"
+                  value={newEvent.date}
+                  onChange={(val) =>
+                    setNewEvent((prev) => ({ ...prev, date: val }))
+                  }
+                  renderInput={(params) => (
+                    <TextField {...params} fullWidth margin="dense" />
+                  )}
+                />
+                <TimePicker
+                  label="Select Time"
+                  value={newEvent.time}
+                  onChange={(val) =>
+                    setNewEvent((prev) => ({ ...prev, time: val }))
+                  }
+                  renderInput={(params) => (
+                    <TextField {...params} fullWidth margin="dense" />
+                  )}
+                />
+              </LocalizationProvider>
+              {/* Recurring Weekly Option */}
+              <FormControlLabel
+                control={
+                  <Checkbox
+                    checked={newEvent.recurring || false}
+                    onChange={(e) =>
+                      setNewEvent((prev) => ({ ...prev, recurring: e.target.checked }))
+                    }
+                    color="primary"
+                  />
+                }
+                label="Recurring Weekly"
+                sx={{ mt: 1 }}
+              />
+
+              <Box mt={2} sx={{ display: "flex", justifyContent: "space-between" }}>
+                <Button variant="outlined" color="error" onClick={clearTimetable}>
+                  Clear Timetable
+                </Button>
+                <Button variant="contained" onClick={handleSubmitEvent}>
+                  Add Event
+                </Button>
+              </Box>
+            </Paper>
+          </Grid>
+
+          {/* Right Panel: Calendar Widget Display */}
+          <Grid item xs={12} md={8}>
+            <Paper
+              elevation={3}
+              sx={{
+                p: { xs: 3, sm: 4 },
+                borderRadius: 2,
+                backgroundColor: "#fafafa",
+              }}
             >
-              Clear Timetable
-            </Button>
-            <Box mt={2}>
-              <Button variant="contained" fullWidth onClick={handleSubmitEvent}>
-                Add Event
-              </Button>
-            </Box>
-          </Box>
+              <Typography variant="h4" align="center" gutterBottom>
+                Weekly Timetable
+              </Typography>
+              <CalendarWidget events={filteredEvents} refresh={refresh} />
+            </Paper>
+          </Grid>
         </Grid>
-
-        {/* Right Side: Timetable Display using CalendarWidget */}
-        <Grid item xs={9}>
-          <Typography variant="h4" align="center" gutterBottom>
-            Weekly Timetable
-          </Typography>
-          <CalendarWidget events={filteredEvents} refresh={refresh} />
-        </Grid>
-      </Grid>
-    </Container>
+      </Container>
+    </motion.div>
   );
 }

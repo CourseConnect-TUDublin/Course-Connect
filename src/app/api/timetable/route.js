@@ -1,4 +1,3 @@
-// /src/app/api/timetable/route.js
 import { connectToDatabase } from '../../../lib/dbConnect.js';
 import Timetable from '../../../models/Timetable.js';
 import { getToken } from "next-auth/jwt";
@@ -9,7 +8,7 @@ export async function GET(req) {
   try {
     await connectToDatabase();
     const token = await getToken({ req, secret });
-    console.log("Token in GET:", token);  // Log the token to check its structure
+    console.log("Token in GET:", token);
     if (!token) {
       return new Response(
         JSON.stringify({ success: false, error: "Unauthorized - No token found" }),
@@ -17,7 +16,6 @@ export async function GET(req) {
       );
     }
     
-    // Use token.id if available, otherwise use token.sub
     const userId = token.id || token.sub;
     if (!userId) {
       return new Response(
@@ -26,7 +24,6 @@ export async function GET(req) {
       );
     }
 
-    // Filter timetable entries by userId
     const entries = await Timetable.find({ userId });
     return new Response(
       JSON.stringify({ success: true, data: entries }),
@@ -62,6 +59,7 @@ export async function POST(req) {
       );
     }
 
+    // Create the initial entry
     const newEntry = new Timetable({
       programme: body.programme,
       course: body.course,
@@ -69,11 +67,41 @@ export async function POST(req) {
       room: body.room,
       fullDateTime: new Date(body.fullDateTime),
       group: body.group,
-      userId: userId, // Associate the entry with the logged-in user
+      userId: userId,
+      recurring: body.recurring || false,
     });
     await newEntry.save();
+
+    // If recurring is enabled, create additional entries (e.g., for 4 more weeks)
+    let recurringEntries = [];
+    if (body.recurring) {
+      for (let i = 1; i <= 4; i++) {
+        const recurringDate = new Date(newEntry.fullDateTime);
+        recurringDate.setDate(recurringDate.getDate() + 7 * i);
+        const recurringEntry = new Timetable({
+          programme: body.programme,
+          course: body.course,
+          lecturer: body.lecturer,
+          room: body.room,
+          fullDateTime: recurringDate,
+          group: body.group,
+          userId: userId,
+          recurring: true,
+        });
+        await recurringEntry.save();
+        recurringEntries.push(recurringEntry);
+      }
+    }
+
     return new Response(
-      JSON.stringify({ success: true, message: "Schedule added successfully", entry: newEntry }),
+      JSON.stringify({
+        success: true,
+        message: body.recurring
+          ? "Schedule and recurring events added successfully"
+          : "Schedule added successfully",
+        entry: newEntry,
+        recurringEntries,
+      }),
       { status: 201, headers: { "Content-Type": "application/json" } }
     );
   } catch (error) {
