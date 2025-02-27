@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import React, { useEffect, useState, useCallback } from "react";
 import {
   Container,
   Typography,
@@ -32,8 +32,8 @@ import { motion } from "framer-motion";
 function Navbar() {
   const router = useRouter();
   return (
-    <AppBar 
-      position="static" 
+    <AppBar
+      position="static"
       sx={{
         backgroundColor: "#ffffff",
         borderBottom: "1px solid #eaeaea",
@@ -59,12 +59,12 @@ export default function Timetable() {
   const { data: session, status } = useSession();
   const router = useRouter();
 
-  const [timetable, setTimetable] = useState([]);
+  const [timetable, setTimetable] = useState([]); // Always an array
   const [programmeData, setProgrammeData] = useState([]);
   const [selectedProgramme, setSelectedProgramme] = useState("");
   const [refresh, setRefresh] = useState(Date.now());
 
-  // New event state – date and time stored as Date objects; add recurring flag.
+  // New event state – date and time stored as Date objects; includes recurring flag.
   const [newEvent, setNewEvent] = useState({
     programme: "",
     course: "",
@@ -111,17 +111,10 @@ export default function Timetable() {
           console.error("Failed to load programme data");
         }
       })
-      .catch((error) =>
-        console.error("Error fetching programme data:", error)
-      );
+      .catch((error) => console.error("Error fetching programme data:", error));
   }, [session]);
 
   // 2. Fetch timetable events whenever selectedProgramme or session changes
-  useEffect(() => {
-    if (!session) return;
-    fetchTimetable();
-  }, [selectedProgramme, session]);
-
   const fetchTimetable = useCallback(async () => {
     if (!session) return;
     const userId = session.user.id || session.user.sub;
@@ -135,7 +128,7 @@ export default function Timetable() {
       });
       const data = await res.json();
       if (data.success) {
-        setTimetable(data.data || []);
+        setTimetable(data.data || []); // Ensure timetable is always an array
       } else {
         toast.error("Failed to fetch timetable data: " + data.error);
       }
@@ -144,6 +137,11 @@ export default function Timetable() {
       console.error("Error fetching timetable:", error);
     }
   }, [session]);
+
+  useEffect(() => {
+    if (!session) return;
+    fetchTimetable();
+  }, [selectedProgramme, session, fetchTimetable]); // Added fetchTimetable as dependency
 
   // 3. Filter events by selected programme
   const filteredEvents = Array.isArray(timetable)
@@ -154,14 +152,11 @@ export default function Timetable() {
   const handleProgrammeChange = (e) => {
     const programmeName = e.target.value;
     setSelectedProgramme(programmeName);
-    const currentProgramme = programmeData.find(
-      (prog) => prog.name === programmeName
-    );
+    const currentProgramme = programmeData.find((prog) => prog.name === programmeName);
     setNewEvent((prev) => ({
       ...prev,
       programme: programmeName,
-      course:
-        currentProgramme?.courses?.length > 0 ? currentProgramme.courses[0] : "",
+      course: currentProgramme?.courses?.length > 0 ? currentProgramme.courses[0] : "",
     }));
     setRefresh(Date.now());
   };
@@ -188,8 +183,7 @@ export default function Timetable() {
       alert("All fields are required!");
       return;
     }
-
-    // Combine date and time into a Date object
+    // Combine date and time into a Date object for fullDateTime
     const combinedDateTime =
       newEvent.date && newEvent.time
         ? new Date(
@@ -202,10 +196,16 @@ export default function Timetable() {
           )
         : null;
 
+    const userId = session.user.id || session.user.sub;
+    if (!userId) {
+      alert("User information is still loading. Please try again.");
+      return;
+    }
+
     const eventToSubmit = {
       ...newEvent,
-      fullDateTime: combinedDateTime,
-      userId: session.user.id,
+      fullDateTime: combinedDateTime ? combinedDateTime.toISOString() : null,
+      userId,
     };
     console.log("Adding New Entry:", eventToSubmit);
 
@@ -218,8 +218,8 @@ export default function Timetable() {
       });
       const data = await res.json();
       if (data.success) {
-        console.log("Entry added successfully:", data.entry);
-        // Reset specific fields (retain programme and course)
+        console.log("Entry added successfully:", data.data);
+        // Reset fields (retain programme and course)
         setNewEvent((prev) => ({
           ...prev,
           lecturer: "",
@@ -227,11 +227,12 @@ export default function Timetable() {
           time: null,
           group: "",
           room: "",
-          recurring: false, // Reset recurring option
+          recurring: false,
         }));
         fetchTimetable();
       } else {
         console.error("Failed to add entry:", data.error);
+        alert("Failed to add entry: " + data.error);
       }
     } catch (error) {
       console.error("Error adding entry:", error);

@@ -1,11 +1,18 @@
-import mongoose from 'mongoose';
+// /src/models/User.js
+const mongoose = require('mongoose');
 
-const UserSchema = new mongoose.Schema({
+const userSchema = new mongoose.Schema({
   name: { type: String, required: true },
   email: { type: String, required: true, unique: true },
-  password: { type: String, required: true },
-}, {
-  timestamps: true,
+  // Study Buddy Fields:
+  subjects: { type: [String], default: [] },
+  availability: { type: [String], default: [] },
+  learningStyle: {
+    type: String,
+    enum: ['visual', 'auditory', 'kinesthetic', 'reading'],
+    default: 'reading'
+  },
+  academicGoals: { type: String },
 });
 
-export default mongoose.models.User || mongoose.model('User', UserSchema);
+module.exports = mongoose.models.User || mongoose.model('User', userSchema);
