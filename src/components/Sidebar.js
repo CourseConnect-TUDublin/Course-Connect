@@ -21,7 +21,7 @@ const sidebarItems = [
   { label: "Dashboard", route: "/dashboard", icon: <DashboardIcon /> },
   { label: "Task Manager", route: "/TaskManager", icon: <Assignment /> },
   { label: "Timetable", route: "/timetable", icon: <CalendarToday /> },
-  { label: "Assignments", route: "/assignments", icon: <Assignment /> },
+  { label: "Flashcards", route: "/flashcards", icon: <Assignment /> },
   { label: "To-Do", route: "/todo", icon: <CheckBox /> },
   // Direct Study Hub link
   { label: "Study Hub", route: "/studyhub", icon: <People /> },
