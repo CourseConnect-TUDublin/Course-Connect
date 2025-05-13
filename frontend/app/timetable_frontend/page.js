@@ -47,7 +47,7 @@ const Navbar = () => (
       <Typography variant="h6" sx={{ flexGrow: 1 }}>
         University Timetable
       </Typography>
-      <Link href="/" passHref>
+      <Link href="/" passHref legacyBehavior>
         <Button color="inherit">🏠 Home</Button>
       </Link>
     </Toolbar>
