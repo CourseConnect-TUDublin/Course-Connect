@@ -22,7 +22,7 @@ const sidebarItems = [
   { label: "Task Manager", route: "/TaskManager", icon: <Assignment /> },
   { label: "Timetable", route: "/timetable", icon: <CalendarToday /> },
   { label: "Flashcards", route: "/flashcards", icon: <Assignment /> },
-  { label: "To-Do", route: "/todo", icon: <CheckBox /> },
+  { label: "Focus Timer", route: "/FocusTimer", icon: <CheckBox /> },
   // Direct Study Hub link
   { label: "Study Hub", route: "/studyhub", icon: <People /> },
   // Optional nested dropdown for study-specific subpages
