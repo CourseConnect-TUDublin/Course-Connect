@@ -1,3 +1,4 @@
+// src/app/api/auth/[...nextauth]/route.js
 import NextAuth from "next-auth";
 import CredentialsProvider from "next-auth/providers/credentials";
 import dbConnect from "../../../../lib/dbConnect";
@@ -10,36 +11,55 @@ const handler = NextAuth({
       name: "Credentials",
       credentials: {
         email: { label: "Email", type: "email", placeholder: "you@example.com" },
-        password: { label: "Password", type: "password" }
+        password: { label: "Password", type: "password" },
       },
       async authorize(credentials) {
-        try {
-          await dbConnect();
-          const user = await User.findOne({ email: credentials.email.toLowerCase() });
-          if (!user) throw new Error("Invalid email or password");
-          const isMatch = await bcrypt.compare(credentials.password, user.password);
-          if (!isMatch) throw new Error("Invalid email or password");
-          console.log("✅ User Authenticated:", user.email);
-          return { id: user._id.toString(), email: user.email, role: "student" };
-        } catch (error) {
-          console.error("❌ Authorization Error:", error);
-          throw new Error("Login failed");
+        // Validate input
+        if (!credentials?.email || !credentials.password) {
+          throw new Error("Email and password are required");
         }
-      }
-    })
+
+        // Connect to database
+        await dbConnect();
+
+        // Normalize email
+        const normalizedEmail = credentials.email.toLowerCase().trim();
+
+        // Find user
+        const user = await User.findOne({ email: normalizedEmail });
+        if (!user || !user.password) {
+          throw new Error("Invalid email or password");
+        }
+
+        // Compare passwords
+        const isMatch = await bcrypt.compare(credentials.password, user.password);
+        if (!isMatch) {
+          throw new Error("Invalid email or password");
+        }
+
+        // Authentication successful
+        console.log("✅ User Authenticated:", user.email);
+        return {
+          id: user._id.toString(),
+          name: user.name,
+          email: user.email,
+          role: user.role || "student",
+        };
+      },
+    }),
   ],
   secret: process.env.NEXTAUTH_SECRET,
   session: { strategy: "jwt" },
   cookies: {
     sessionToken: {
-      name: "next-auth.session-token", // force this name in dev
+      name: "next-auth.session-token",
       options: {
         httpOnly: true,
         sameSite: "lax",
         path: "/",
-        secure: process.env.NODE_ENV === "production" // false in dev
-      }
-    }
+        secure: process.env.NODE_ENV === "production",
+      },
+    },
   },
   callbacks: {
     async jwt({ token, user }) {
@@ -48,20 +68,19 @@ const handler = NextAuth({
         token.email = user.email;
         token.role = user.role;
       }
-      console.log("🟡 JWT Token:", token);
       return token;
     },
     async session({ session, token }) {
+      session.user = session.user || {};
       session.user.id = token.id;
       session.user.email = token.email;
       session.user.role = token.role;
-      console.log("🟢 Session Data:", session);
       return session;
-    }
+    },
   },
   pages: {
-    signIn: "/login"
-  }
+    signIn: "/login",
+  },
 });
 
 export { handler as GET, handler as POST };

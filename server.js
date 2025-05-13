@@ -1,4 +1,6 @@
 // server.js
+require('dotenv').config({ path: '.env.local' });
+
 const express = require('express');
 const next = require('next');
 const http = require('http');

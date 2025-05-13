@@ -1,43 +1,67 @@
 // src/app/api/register/route.js
+import { NextResponse } from 'next/server';
 import dbConnect from '../../../lib/dbConnect.js';
 import User from '../../../models/User.js';
 import bcrypt from 'bcrypt';
 
-export async function POST(req) {
+export async function POST(request) {
   try {
+    // Connect to MongoDB
     await dbConnect();
-    const { name, email, password } = await req.json();
-    console.log("Received registration data:", { name, email, password });
 
-    const normalizedEmail = email.toLowerCase();
-    const trimmedPassword = password.trim();
-    console.log("Registration trimmed password:", `"${trimmedPassword}"`, `Length: ${trimmedPassword.length}`);
-
-    const existingUser = await User.findOne({ email: normalizedEmail });
-    if (existingUser) {
-      return new Response(
-        JSON.stringify({ message: "User already exists" }),
-        { status: 400, headers: { "Content-Type": "application/json" } }
+    // Parse and validate incoming JSON
+    const { name, email, password } = await request.json();
+    if (!name || !email || !password) {
+      return NextResponse.json(
+        { message: 'Missing name, email, or password' },
+        { status: 400 }
       );
     }
 
+    console.log('Received registration data:', { name, email, password });
+
+    // Normalize and trim inputs
+    const normalizedEmail = email.toLowerCase();
+    const trimmedPassword = password.trim();
+    console.log(
+      'Registration trimmed password:',
+      `"${trimmedPassword}"`,
+      `Length: ${trimmedPassword.length}`
+    );
+
+    // Check for existing user
+    const existingUser = await User.findOne({ email: normalizedEmail });
+    if (existingUser) {
+      return NextResponse.json(
+        { message: 'User already exists' },
+        { status: 400 }
+      );
+    }
+
+    // Hash the password
     const hashedPassword = await bcrypt.hash(trimmedPassword, 10);
+
+    // Create new user
     const newUser = new User({
-      name,
+      name: name.trim(),
       email: normalizedEmail,
       password: hashedPassword,
+      subjects: [],
+      availability: [],
+      learningStyle: 'reading',
     });
     await newUser.save();
 
-    return new Response(
-      JSON.stringify({ message: "Registration successful" }),
-      { status: 201, headers: { "Content-Type": "application/json" } }
+    // Respond with success
+    return NextResponse.json(
+      { message: 'Registration successful' },
+      { status: 201 }
     );
   } catch (error) {
-    console.error("Error during registration:", error);
-    return new Response(
-      JSON.stringify({ message: "Internal Server Error", error: error.message }),
-      { status: 500, headers: { "Content-Type": "application/json" } }
+    console.error('Error during registration:', error);
+    return NextResponse.json(
+      { message: 'Internal Server Error', error: error.message },
+      { status: 500 }
     );
   }
 }

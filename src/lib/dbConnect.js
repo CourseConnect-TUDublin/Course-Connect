@@ -1,8 +1,10 @@
 // src/lib/dbConnect.js
 import mongoose from "mongoose";
 
-const MONGODB_URI = process.env.MONGODB_URI;
+// Log environment variable for debugging
+console.log("⏳ MONGODB_URI:", process.env.MONGODB_URI);
 
+const MONGODB_URI = process.env.MONGODB_URI;
 if (!MONGODB_URI) {
   throw new Error(
     "Please define the MONGODB_URI environment variable in your .env.local file"
@@ -17,11 +19,24 @@ if (!cached) {
 
 async function dbConnect() {
   if (cached.conn) {
+    console.log("✅ Using cached MongoDB connection");
     return cached.conn;
   }
+
   if (!cached.promise) {
-    cached.promise = mongoose.connect(MONGODB_URI);
+    console.log("⏳ Establishing new MongoDB connection...");
+    cached.promise = mongoose
+      .connect(MONGODB_URI)
+      .then((mongooseInstance) => {
+        console.log("🚀 MongoDB connected");
+        return mongooseInstance;
+      })
+      .catch((err) => {
+        console.error("⛔ MongoDB connection failed:", err);
+        throw err;
+      });
   }
+
   cached.conn = await cached.promise;
   return cached.conn;
 }
