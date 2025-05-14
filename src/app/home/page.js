@@ -11,6 +11,7 @@ import {
   AppBar,
   Toolbar,
   Button,
+  Card,
 } from "@mui/material";
 import { motion } from "framer-motion";
 import Link from "next/link";
@@ -27,14 +28,15 @@ import {
   Settings,
 } from "@mui/icons-material";
 import { useSession, signOut } from "next-auth/react";
+import { Hourglass } from "lucide-react";
 
 // Define tool items (widgets) for the home overview
 const toolItems = [
   { label: "Dashboard", route: "/dashboard", icon: <DashboardIcon fontSize="large" /> },
   { label: "Task Manager", route: "/TaskManager", icon: <Assignment fontSize="large" /> },
   { label: "Timetable", route: "/timetable", icon: <CalendarToday fontSize="large" /> },
-  { label: "Flashcards", route: "/flashcards", icon: <Assignment fontSize="large" /> },
-  { label: "To-Do", route: "/todo", icon: <CheckBox fontSize="large" /> },
+  { label: "Flashcards", route: "/flashcards", icon: <Card fontSize="large" /> },
+  { label: "Focus Timer", route: "/FocusTimer", icon: <Hourglass fontSize="large" /> },
   { label: "Study Buddy", route: "/StudyBuddy", icon: <People fontSize="large" /> },
   { label: "Chat Room", route: "/chatroom", icon: <Chat fontSize="large" /> },
   { label: "Calendar", route: "/calendar", icon: <CalendarToday fontSize="large" /> },
