@@ -1,71 +1,46 @@
-// /src/components/SessionRequestForm.js
+// src/components/SessionRequestForm.js
 "use client";
 
-import React, { useState } from 'react';
-import { Box, TextField, Button, Typography } from '@mui/material';
+import React, { useState } from "react";
+import { Dialog, DialogTitle, DialogContent, DialogActions, Button, TextField } from "@mui/material";
+import { useSession } from "next-auth/react";
 
-const SessionRequestForm = ({ buddyId, onRequestSent }) => {
-  const [preferredTimes, setPreferredTimes] = useState('');
-  const [message, setMessage] = useState('');
-
-  // Replace this with the actual logged-in user's ObjectId for production.
-  const currentUserId = "63f99ed37b2b9c1d2f4af6a5"; 
+export default function SessionRequestForm({ open, onClose, buddyId }) {
+  const { data: session } = useSession();
+  const hostId = session?.user?.id;  // real MongoDB _id
+  const [datetime, setDatetime] = useState("");
 
   const handleSubmit = async () => {
-    console.log("Submitting session request...");
-
-    try {
-      const res = await fetch('/api/session-requests', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          requester: currentUserId,
-          buddy: buddyId,
-          preferredTimes: preferredTimes.split(',').map(time => time.trim()),
-          message
-        })
-      });
-
-      if (res.ok) {
-        console.log("Session request submitted successfully");
-        onRequestSent && onRequestSent();
-        alert("Session request sent!");
-      } else {
-        console.error("Failed to send session request", res.statusText);
-        alert("Failed to send request.");
-      }
-    } catch (error) {
-      console.error("Error in handleSubmit:", error);
-      alert("An error occurred.");
-    }
+    await fetch("/api/sessions", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        hostId,
+        participantIds: [buddyId],
+        datetime
+      })
+    });
+    onClose(true);
   };
 
   return (
-    <Box sx={{ mt: 2 }}>
-      <Typography variant="h6">Request a Session</Typography>
-      <TextField
-        label="Preferred Times (comma separated)"
-        variant="outlined"
-        fullWidth
-        value={preferredTimes}
-        onChange={(e) => setPreferredTimes(e.target.value)}
-        sx={{ mt: 1 }}
-      />
-      <TextField
-        label="Message"
-        variant="outlined"
-        fullWidth
-        multiline
-        rows={3}
-        value={message}
-        onChange={(e) => setMessage(e.target.value)}
-        sx={{ mt: 1 }}
-      />
-      <Button variant="contained" color="primary" onClick={handleSubmit} sx={{ mt: 2 }}>
-        Send Request
-      </Button>
-    </Box>
+    <Dialog open={open} onClose={() => onClose(false)}>
+      <DialogTitle>Request Study Session</DialogTitle>
+      <DialogContent sx={{ display: "grid", gap: 2, width: 400 }}>
+        <TextField
+          type="datetime-local"
+          label="When"
+          InputLabelProps={{ shrink: true }}
+          value={datetime}
+          onChange={(e) => setDatetime(e.target.value)}
+        />
+      </DialogContent>
+      <DialogActions>
+        <Button onClick={() => onClose(false)}>Cancel</Button>
+        <Button onClick={handleSubmit} disabled={!datetime}>
+          Send Request
+        </Button>
+      </DialogActions>
+    </Dialog>
   );
-};
-
-export default SessionRequestForm;
+}

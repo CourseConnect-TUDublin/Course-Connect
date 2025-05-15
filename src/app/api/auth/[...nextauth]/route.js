@@ -32,6 +32,7 @@ export const authOptions = {
           throw new Error("Invalid email or password");
         }
 
+        // Return the minimal user object for the JWT
         return {
           id:    user._id.toString(),
           name:  user.name,
@@ -46,14 +47,33 @@ export const authOptions = {
   session: { strategy: "jwt" },
 
   callbacks: {
+    // After a successful sign-in, update lastActive & status
+    async signIn({ user, account, profile }) {
+      try {
+        await dbConnect();
+        // mark the user online and update timestamp
+        await User.findByIdAndUpdate(user.id, {
+          status:     "online",
+          lastActive: new Date()
+        });
+      } catch (err) {
+        console.error("Error updating lastActive on signIn:", err);
+      }
+      return true;
+    },
+
+    // Populate the JWT with our user fields
     async jwt({ token, user }) {
       if (user) {
         token.id    = user.id;
+        token.name  = user.name;
         token.email = user.email;
         token.role  = user.role;
       }
       return token;
     },
+
+    // Expose those fields in the session object
     async session({ session, token }) {
       session.user = {
         id:    token.id,

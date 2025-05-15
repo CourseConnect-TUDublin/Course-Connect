@@ -1,114 +1,104 @@
 "use client";
 
-import React, { useState, useEffect } from 'react';
-import { useSession } from 'next-auth/react';
+import React, { useState, useEffect } from "react";
+import { useSession } from "next-auth/react";
 import {
   Box,
+  Typography,
   List,
   ListItem,
   ListItemAvatar,
   Avatar,
   ListItemText,
-  Typography,
   Button,
   CircularProgress
-} from '@mui/material';
+} from "@mui/material";
 
 export default function SessionRequestsOverview() {
-  const { data: session, status } = useSession();
+  const { data: session } = useSession();
   const userId = session?.user?.id;
-
   const [requests, setRequests] = useState(null);
   const [loading, setLoading]   = useState(false);
   const [error, setError]       = useState(null);
 
-  // Fetch pending requests for me
   useEffect(() => {
     if (!userId) return;
     setLoading(true);
-    fetch(`/api/session-requests?to=${userId}`)
-      .then(res => {
-        if (!res.ok) throw new Error(`HTTP ${res.status}`);
-        return res.json();
+    setError(null);
+
+    // Fetch only pending sessions for this user
+    fetch(`/api/sessions?participantId=${userId}&status=pending`)
+      .then(async (r) => {
+        if (!r.ok) throw new Error(await r.text());
+        const data = await r.json();
+        console.log("SessionRequestsOverview fetched:", data);
+        return data;
       })
-      .then(data => setRequests(data))
-      .catch(err => setError(err.message))
+      .then((all) => {
+        setRequests(all);
+      })
+      .catch((e) => {
+        console.error("SessionRequestsOverview error:", e);
+        setError(e.message);
+      })
       .finally(() => setLoading(false));
   }, [userId]);
 
-  // Handler to accept or decline
-  const handleAction = async (reqId, action) => {
-    setLoading(true);
-    await fetch(`/api/session-requests/${reqId}`, {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ action })
+  const handleConfirm = async (sessionId) => {
+    await fetch(`/api/sessions/${sessionId}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ status: "confirmed" })
     });
-    // Re-fetch after updating
-    fetch(`/api/session-requests?to=${userId}`)
-      .then(res => res.json())
-      .then(data => setRequests(data))
-      .catch(err => setError(err.message))
-      .finally(() => setLoading(false));
+    // remove from list
+    setRequests((prev) => prev.filter((r) => r._id !== sessionId));
   };
 
-  if (status === 'loading' || loading) {
+  if (loading) {
     return (
-      <Box sx={{ textAlign: 'center', py: 4 }}>
-        <CircularProgress />
+      <Box sx={{ textAlign: "center", py: 2 }}>
+        <CircularProgress size={24} />
       </Box>
     );
   }
-
   if (error) {
     return (
-      <Typography color="error" sx={{ textAlign: 'center', py: 2 }}>
-        Failed to load requests: {error}
+      <Typography color="error" sx={{ textAlign: "center", py: 2 }}>
+        {error}
       </Typography>
     );
   }
-
-  if (!requests || requests.length === 0) {
+  if (!requests?.length) {
     return (
-      <Typography sx={{ textAlign: 'center', py: 2 }}>
-        No session requests found.
+      <Typography sx={{ textAlign: "center", py: 2 }}>
+        No session requests.
       </Typography>
     );
   }
 
   return (
     <List>
-      {requests.map(req => {
-        // Use startTime instead of old datetime
-        const dateStr = new Date(req.sessionId.startTime).toLocaleString();
-
-        return (
-          <ListItem key={req._id} divider alignItems="flex-start">
-            <ListItemAvatar>
-              <Avatar src={req.from.avatar} alt={req.from.name} />
-            </ListItemAvatar>
-            <ListItemText
-              primary={`${req.from.name} invited you to a session on ${dateStr}`}
-            />
-            <Box sx={{ display: 'flex', gap: 1 }}>
-              <Button
-                size="small"
-                variant="contained"
-                onClick={() => handleAction(req._id, 'accept')}
-              >
-                Accept
-              </Button>
-              <Button
-                size="small"
-                variant="outlined"
-                onClick={() => handleAction(req._id, 'decline')}
-              >
-                Decline
-              </Button>
-            </Box>
-          </ListItem>
-        );
-      })}
+      {requests.map((s) => (
+        <ListItem key={s._id} alignItems="flex-start" divider
+          secondaryAction={
+            <Button
+              variant="contained"
+              size="small"
+              onClick={() => handleConfirm(s._id)}
+            >
+              Confirm
+            </Button>
+          }
+        >
+          <ListItemAvatar>
+            <Avatar src={s.host.avatar} alt={s.host.name} />
+          </ListItemAvatar>
+          <ListItemText
+            primary={`Session on ${new Date(s.datetime).toLocaleString()}`}
+            secondary={`Host: ${s.host.name}`}
+          />
+        </ListItem>
+      ))}
     </List>
   );
 }
