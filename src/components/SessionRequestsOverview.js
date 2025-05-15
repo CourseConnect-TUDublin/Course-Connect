@@ -26,17 +26,12 @@ export default function SessionRequestsOverview() {
     setLoading(true);
     setError(null);
 
-    // Fetch only pending sessions for this user
     fetch(`/api/sessions?participantId=${userId}&status=pending`)
       .then(async (r) => {
         if (!r.ok) throw new Error(await r.text());
-        const data = await r.json();
-        console.log("SessionRequestsOverview fetched:", data);
-        return data;
+        return r.json();
       })
-      .then((all) => {
-        setRequests(all);
-      })
+      .then((all) => setRequests(all))
       .catch((e) => {
         console.error("SessionRequestsOverview error:", e);
         setError(e.message);
@@ -50,7 +45,6 @@ export default function SessionRequestsOverview() {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ status: "confirmed" })
     });
-    // remove from list
     setRequests((prev) => prev.filter((r) => r._id !== sessionId));
   };
 
@@ -78,27 +72,39 @@ export default function SessionRequestsOverview() {
 
   return (
     <List>
-      {requests.map((s) => (
-        <ListItem key={s._id} alignItems="flex-start" divider
-          secondaryAction={
-            <Button
-              variant="contained"
-              size="small"
-              onClick={() => handleConfirm(s._id)}
-            >
-              Confirm
-            </Button>
-          }
-        >
-          <ListItemAvatar>
-            <Avatar src={s.host.avatar} alt={s.host.name} />
-          </ListItemAvatar>
-          <ListItemText
-            primary={`Session on ${new Date(s.datetime).toLocaleString()}`}
-            secondary={`Host: ${s.host.name}`}
-          />
-        </ListItem>
-      ))}
+      {requests.map((s) => {
+        // safe-access host properties and provide defaults
+        const avatarUrl = s.host?.avatar ?? "/default-avatar.png";
+        const hostName  = s.host?.name   ?? "Unknown Host";
+        const dateLabel = s.datetime
+          ? new Date(s.datetime).toLocaleString()
+          : "TBD";
+
+        return (
+          <ListItem
+            key={s._id}
+            alignItems="flex-start"
+            divider
+            secondaryAction={
+              <Button
+                variant="contained"
+                size="small"
+                onClick={() => handleConfirm(s._id)}
+              >
+                Confirm
+              </Button>
+            }
+          >
+            <ListItemAvatar>
+              <Avatar src={avatarUrl} alt={hostName} />
+            </ListItemAvatar>
+            <ListItemText
+              primary={`Session on ${dateLabel}`}
+              secondary={`Host: ${hostName}`}
+            />
+          </ListItem>
+        );
+      })}
     </List>
   );
 }
