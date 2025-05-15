@@ -2,19 +2,30 @@
 "use client";
 
 import React from "react";
-import { Box, Grid, Paper, Typography, CircularProgress, Button } from "@mui/material";
-import { useSession, signIn } from "next-auth/react";
+import Link from "next/link";
 import dynamic from "next/dynamic";
+import {
+  Box,
+  Grid,
+  Paper,
+  Typography,
+  CircularProgress,
+  Button,
+} from "@mui/material";
+import { useSession, signIn } from "next-auth/react";
 
 // Core components
-import StudyBuddyList           from "../../components/StudyBuddyList";
-import RecommendedBuddies       from "../../components/RecommendedBuddies";
-import SessionRequestsOverview  from "../../components/SessionRequestsOverview";
-import StudySessions            from "../../components/StudySessions";
+import StudyBuddyList from "@/components/StudyBuddyList";
+import RecommendedBuddies from "@/components/RecommendedBuddies";
+import SessionRequestsOverview from "@/components/SessionRequestsOverview";
+import StudySessions from "@/components/StudySessions";
 
-// Dynamically imported (no SSR)
-const Chat           = dynamic(() => import("../../components/Chat"), { ssr: false });
-const CalendarWidget = dynamic(() => import("../../components/CalendarWidget"), { ssr: false });
+// We no longer embed Chat here, so we can remove its import
+// const Chat = dynamic(() => import("@/components/Chat"), { ssr: false });
+const CalendarWidget = dynamic(
+  () => import("@/components/CalendarWidget"),
+  { ssr: false }
+);
 
 // Reusable card wrapper
 const HubCard = ({ title, children }) => (
@@ -34,10 +45,9 @@ const HubCard = ({ title, children }) => (
   </Paper>
 );
 
-export default function StudyHub() {
+export default function StudyHubPage() {
   const { data: session, status } = useSession();
 
-  // 1) Loading state
   if (status === "loading") {
     return (
       <Box
@@ -54,7 +64,6 @@ export default function StudyHub() {
     );
   }
 
-  // 2) Not signed in
   if (!session) {
     return (
       <Box
@@ -75,7 +84,8 @@ export default function StudyHub() {
     );
   }
 
-  const user = session.user; // full user object, e.g. { id, name, email, role }
+  const user = session.user;
+  const currentUser = user.name ?? user.id;
 
   return (
     <Box
@@ -93,8 +103,8 @@ export default function StudyHub() {
         Study Hub
       </Typography>
       <Typography variant="subtitle1" sx={{ mb: 4, color: "#555" }}>
-        Your one-stop hub for study-related activities: connect with study buddies,
-        manage sessions, join live chats, and more.
+        Your one-stop hub for study-related activities: connect with study
+        buddies, manage sessions, join live chats, and more.
       </Typography>
 
       <Grid container spacing={3}>
@@ -126,10 +136,17 @@ export default function StudyHub() {
           </HubCard>
         </Grid>
 
-        {/* 5. Group Study Chat Room */}
+        {/* 5. Group Study Chat Room - now links to a dedicated chat page */}
         <Grid item xs={12}>
           <HubCard title="Group Study Chat Room">
-            <Chat room="studyhub-chat" currentUser={user} />
+            <Button
+              component={Link}
+              href="/chatroom"
+              variant="contained"
+              sx={{ textTransform: "none" }}
+            >
+              Open Chat Room
+            </Button>
           </HubCard>
         </Grid>
 
