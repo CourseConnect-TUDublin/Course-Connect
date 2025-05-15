@@ -1,17 +1,11 @@
-// models/Session.js
-const mongoose = require('mongoose');
+import mongoose from 'mongoose';
+const { Schema } = mongoose;
 
-const sessionSchema = new mongoose.Schema({
-  tutor: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
-  student: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
-  startTime: { type: Date, required: true },
-  endTime: { type: Date, required: true },
-  status: {
-    type: String,
-    enum: ['pending', 'confirmed', 'cancelled'],
-    default: 'pending'
-  },
-  // Additional fields like feedback can be added later.
+const SessionSchema = new Schema({
+  host:         { type: Schema.Types.ObjectId, ref: 'User', required: true },
+  participants: [{ type: Schema.Types.ObjectId, ref: 'User' }],
+  datetime:     { type: Date, required: true },
+  createdAt:    { type: Date, default: Date.now }
 });
 
-module.exports = mongoose.models.Session || mongoose.model('Session', sessionSchema);
+export default mongoose.models.Session || mongoose.model('Session', SessionSchema);

@@ -1,12 +1,14 @@
 import mongoose from 'mongoose';
+const { Schema } = mongoose;
 
-const UserSchema = new mongoose.Schema({
-  name: { type: String, required: true },
-  email: { type: String, required: true, unique: true },
-  password: { type: String, required: true },      // <— must be here
-  subjects: [String],
-  availability: [String],
-  learningStyle: String,
+const UserSchema = new Schema({
+  name:         { type: String, required: true },
+  email:        { type: String, unique: true, required: true },
+  password:     { type: String, required: true },
+  avatar:       { type: String },
+  status:       { type: String, enum: ['online','offline','busy'], default: 'offline' },
+  subjects:     { type: [String], required: true },
+  availability: { type: [String], required: true }
 });
 
 export default mongoose.models.User || mongoose.model('User', UserSchema);
