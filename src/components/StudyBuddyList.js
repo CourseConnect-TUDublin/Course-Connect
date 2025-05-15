@@ -1,93 +1,173 @@
+// src/components/StudyBuddyList.js
 "use client";
 
-import React, { useState, useEffect } from 'react';
-import { Card, CardContent, Typography, Button, Box, TextField } from '@mui/material';
-import { useRouter } from 'next/navigation';
+import React, { useState, useEffect, useMemo } from "react";
+import { useSession } from "next-auth/react";
+import {
+  Box,
+  TextField,
+  List,
+  ListItem,
+  ListItemAvatar,
+  ListItemButton,
+  Avatar,
+  ListItemText,
+  Badge,
+  CircularProgress,
+  Typography,
+  ToggleButton,
+  ToggleButtonGroup,
+  Button
+} from "@mui/material";
+import { debounce } from "lodash";
+import Link from "next/link";
+import SessionRequestForm from "./SessionRequestForm";
 
-const StudyBuddyList = () => {
-  const router = useRouter();
-  const [studyBuddies, setStudyBuddies] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
-  const [searchTerm, setSearchTerm] = useState('');
+export default function StudyBuddyList() {
+  const { data: session } = useSession();
+  const currentId = session?.user?.id;
 
-  useEffect(() => {
-    const fetchStudyBuddies = async () => {
+  const [buddies, setBuddies]         = useState([]);
+  const [search, setSearch]           = useState("");
+  const [loading, setLoading]         = useState(false);
+  const [error, setError]             = useState(null);
+  const [filter, setFilter]           = useState("all");  // all | online
+  const [requestBuddyId, setRequestBuddyId] = useState(null);
+  const [formOpen, setFormOpen]       = useState(false);
+
+  // Debounced fetch
+  const fetchBuddies = useMemo(() =>
+    debounce(async q => {
+      setLoading(true);
+      setError(null);
       try {
-        const res = await fetch('/api/studybuddies');
-        if (!res.ok) {
-          throw new Error('Network response was not ok');
-        }
-        const data = await res.json();
-        setStudyBuddies(data);
-      } catch (err) {
-        console.error('Error fetching study buddies:', err);
-        setError(err.message);
+        const url = `/api/studybuddies${q ? `?search=${encodeURIComponent(q)}` : ""}`;
+        console.log("Fetching", url);
+        const res = await fetch(url);
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        let data = await res.json();
+        console.log("Data", data);
+        // Exclude current user
+        if (currentId) data = data.filter(b => b._id !== currentId);
+        setBuddies(data);
+      } catch (e) {
+        console.error(e);
+        setError(e.message);
       } finally {
         setLoading(false);
       }
-    };
+    }, 300)
+  , [currentId]);
 
-    fetchStudyBuddies();
-  }, []);
+  useEffect(() => {
+    fetchBuddies(search);
+    return () => fetchBuddies.cancel();
+  }, [search, fetchBuddies]);
 
-  if (loading) return <Typography>Loading study buddies...</Typography>;
-  if (error) return <Typography color="error">Error: {error}</Typography>;
-
-  // Filter study buddies based on the search term (by name or subjects)
-  const filteredBuddies = studyBuddies.filter((buddy) => {
-    const lowerCaseTerm = searchTerm.toLowerCase();
-    const nameMatches = buddy.name.toLowerCase().includes(lowerCaseTerm);
-    const subjectsMatches =
-      buddy.subjects && buddy.subjects.join(' ').toLowerCase().includes(lowerCaseTerm);
-    return nameMatches || subjectsMatches;
-  });
+  // Apply online filter
+  const displayed = filter === "online"
+    ? buddies.filter(b => b.status === "online")
+    : buddies;
 
   return (
     <Box>
-      <Typography variant="h5" gutterBottom>
-        Study Buddies
-      </Typography>
-      <TextField
-        label="Search buddies"
-        variant="outlined"
-        fullWidth
-        value={searchTerm}
-        onChange={(e) => setSearchTerm(e.target.value)}
-        sx={{ mb: 2 }}
-      />
-      {filteredBuddies.length === 0 ? (
-        <Typography>No study buddies found.</Typography>
-      ) : (
-        filteredBuddies.map((buddy) => (
-          <Card key={buddy._id} sx={{ mb: 2, p: 2 }}>
-            <CardContent>
-              <Typography variant="h6">{buddy.name}</Typography>
-              <Typography variant="body1">
-                <strong>Subjects:</strong>{' '}
-                {buddy.subjects && buddy.subjects.length > 0 ? buddy.subjects.join(', ') : 'Not specified'}
-              </Typography>
-              <Typography variant="body1">
-                <strong>Learning Style:</strong> {buddy.learningStyle || 'Not specified'}
-              </Typography>
-              <Typography variant="body1">
-                <strong>Availability:</strong>{' '}
-                {buddy.availability && buddy.availability.length > 0 ? buddy.availability.join(', ') : 'Not specified'}
-              </Typography>
-              <Button
-                variant="contained"
-                color="primary"
-                sx={{ mt: 1 }}
-                onClick={() => router.push(`/StudyBuddy/${buddy._id}`)}
-              >
-                View Profile
-              </Button>
-            </CardContent>
-          </Card>
-        ))
+      {/* Search + Filter */}
+      <Box sx={{ display: "flex", gap: 2, mb: 2 }}>
+        <TextField
+          fullWidth
+          placeholder="Search buddies…"
+          value={search}
+          onChange={e => setSearch(e.target.value)}
+        />
+        <ToggleButtonGroup
+          value={filter}
+          exclusive
+          onChange={(_, v) => v && setFilter(v)}
+          size="small"
+        >
+          <ToggleButton value="all">All</ToggleButton>
+          <ToggleButton value="online">Online Now</ToggleButton>
+        </ToggleButtonGroup>
+      </Box>
+
+      {/* Loading / Error / Empty */}
+      {loading && (
+        <Box sx={{ textAlign: "center", py: 2 }}>
+          <CircularProgress size={24} />
+        </Box>
       )}
+      {error && (
+        <Typography color="error" sx={{ textAlign: "center", py: 2 }}>
+          {error}
+        </Typography>
+      )}
+      {!loading && !error && displayed.length === 0 && (
+        <Typography sx={{ textAlign: "center", py: 2 }}>
+          No study buddies found.
+        </Typography>
+      )}
+
+      {/* Buddy List */}
+      {!loading && !error && displayed.length > 0 && (
+        <List>
+          {displayed.map(({ _id, name, avatar, status }) => {
+            const stat = status || "offline";
+            const badgeColor = {
+              online:  "success",
+              offline: "default",
+              busy:    "warning"
+            }[stat] || "default";
+
+            return (
+              <ListItem
+                key={_id}
+                divider
+                secondaryAction={
+                  <Button
+                    size="small"
+                    onClick={() => {
+                      setRequestBuddyId(_id);
+                      setFormOpen(true);
+                    }}
+                  >
+                    Request
+                  </Button>
+                }
+                disablePadding
+              >
+                <ListItemButton component={Link} href={`/StudyBuddy/${_id}`}>
+                  <ListItemAvatar>
+                    <Badge
+                      overlap="circular"
+                      badgeContent=" "
+                      variant="dot"
+                      color={badgeColor}
+                      anchorOrigin={{ vertical: "bottom", horizontal: "right" }}
+                    >
+                      <Avatar src={avatar} alt={name} />
+                    </Badge>
+                  </ListItemAvatar>
+                  <ListItemText
+                    primary={name}
+                    secondary={stat.charAt(0).toUpperCase() + stat.slice(1)}
+                  />
+                </ListItemButton>
+              </ListItem>
+            );
+          })}
+        </List>
+      )}
+
+      {/* Session Request Dialog */}
+      <SessionRequestForm
+        open={formOpen}
+        buddyId={requestBuddyId}
+        onClose={(didCreate) => {
+          setFormOpen(false);
+          setRequestBuddyId(null);
+          // optionally refetch or notify on didCreate
+        }}
+      />
     </Box>
   );
-};
-
-export default StudyBuddyList;
+}

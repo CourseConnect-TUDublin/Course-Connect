@@ -1,87 +1,88 @@
+// src/components/RecommendedBuddies.js
 "use client";
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect } from "react";
+import { useSession } from "next-auth/react";
 import {
+  Box,
+  Typography,
   List,
   ListItem,
   ListItemAvatar,
   Avatar,
   Badge,
   ListItemText,
-  Typography,
-  Box,
   CircularProgress
-} from '@mui/material';
-import { useSession } from 'next-auth/react';
+} from "@mui/material";
 
-export default function RecommendedBuddies() {
-  const { data: session, status } = useSession();
-  const userId = session?.user?.id;
+export default function RecommendedBuddies({ currentUser }) {
+  const { data: session } = useSession();
+  const myId = session?.user?.id;
+  const [recs, setRecs] = useState(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError]   = useState(null);
 
-  const [allBuddies, setAllBuddies]       = useState([]);
-  const [me,          setMe]              = useState(null);
-  const [recommended, setRecommended]     = useState([]);
-  const [loading,     setLoading]         = useState(true);
-  const [error,       setError]           = useState(null);
-
-  // 1) Load my full record + all buddies in parallel
   useEffect(() => {
-    if (!userId) return;
+    if (!session) return;
     setLoading(true);
-    Promise.all([
-      fetch(`/api/studybuddies?id=${userId}`).then(r => r.json()),
-      fetch('/api/studybuddies').then(r => r.json())
-    ])
-      .then(([meData, buddiesData]) => {
-        setMe(meData);
-        setAllBuddies(buddiesData.filter(b => b._id !== userId));
+    fetch("/api/studybuddies")
+      .then((r) => {
+        if (!r.ok) throw new Error(r.statusText);
+        return r.json();
       })
-      .catch(err => setError(err.message))
+      .then((all) => {
+        // find current user's subjects
+        const me = all.find((u) => u._id === myId);
+        const mySubjects = me?.subjects || [];
+
+        // score others by shared-subject count
+        const scored = all
+          .filter((u) => u._id !== myId)
+          .map((u) => {
+            const shared = u.subjects?.filter((s) => mySubjects.includes(s)).length || 0;
+            return { ...u, score: shared };
+          })
+          .filter((u) => u.score > 0)
+          .sort((a, b) => b.score - a.score)
+          .slice(0, 5); // top 5
+
+        setRecs(scored);
+      })
+      .catch((e) => setError(e.message))
       .finally(() => setLoading(false));
-  }, [userId]);
+  }, [session]);
 
-  // 2) Compute recommended when data is ready
-  useEffect(() => {
-    if (!me || !allBuddies.length) return;
-    const mySubjects = new Set(me.subjects || []);
-    const recs = allBuddies
-      .map(b => ({
-        ...b,
-        common: (b.subjects || []).filter(s => mySubjects.has(s)).length
-      }))
-      .filter(b => b.common > 0)         // at least one shared subject
-      .sort((a, b) => b.common - a.common) // most in common first
-      .slice(0, 5);                      // limit to top 5
-    setRecommended(recs);
-  }, [me, allBuddies]);
-
-  if (status === 'loading' || loading) {
+  if (loading) {
     return (
-      <Box sx={{ textAlign: 'center', py: 4 }}>
-        <CircularProgress />
+      <Box sx={{ textAlign: "center", py: 2 }}>
+        <CircularProgress size={24} />
       </Box>
     );
   }
   if (error) {
     return (
-      <Typography color="error" sx={{ textAlign: 'center' }}>
-        Failed to load recommendations: {error}
+      <Typography color="error" sx={{ textAlign: "center" }}>
+        {error}
       </Typography>
     );
   }
-  if (!recommended.length) {
-    return <Typography>No recommended buddies right now.</Typography>;
+  if (!recs || recs.length === 0) {
+    return (
+      <Typography sx={{ textAlign: "center", py: 2 }}>
+        No recommendations available.
+      </Typography>
+    );
   }
 
   return (
     <List>
-      {recommended.map(({ _id, name, avatar, status, common }) => {
-        const stat = typeof status === 'string' ? status : 'offline';
+      {recs.map(({ _id, name, avatar, status, score }) => {
         const badgeColor = {
-          online:  'success',
-          offline: 'default',
-          busy:    'warning'
-        }[stat] || 'default';
+          online: "success",
+          offline: "default",
+          busy: "warning"
+        }[status] || "default";
+
         return (
           <ListItem key={_id} divider>
             <ListItemAvatar>
@@ -90,14 +91,14 @@ export default function RecommendedBuddies() {
                 badgeContent=" "
                 variant="dot"
                 color={badgeColor}
-                anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
+                anchorOrigin={{ vertical: "bottom", horizontal: "right" }}
               >
                 <Avatar src={avatar} alt={name} />
               </Badge>
             </ListItemAvatar>
             <ListItemText
               primary={name}
-              secondary={`Shared subjects: ${common}`}
+              secondary={`${score} shared subject${score !== 1 ? "s" : ""}`}
             />
           </ListItem>
         );

@@ -1,45 +1,48 @@
-// /src/app/api/studybuddies/route.js
-import dbConnect from '../../../utils/dbConnect';
-import User      from '../../../models/User';
+// src/app/api/studybuddies/route.js
 
-export async function GET(request) {
+import dbConnect from '../../../utils/dbConnect';
+import User from '../../../models/User';
+import { NextResponse } from 'next/server';
+
+export async function GET(req) {
   await dbConnect();
-  const { searchParams } = new URL(request.url);
-  const id     = searchParams.get('id');
+  const { searchParams } = new URL(req.url);
   const search = searchParams.get('search');
+  const id     = searchParams.get('id');
 
   try {
-    // 1) Single lookup by ID
     if (id) {
+      // Fetch a single user by ID
       const buddy = await User.findById(id);
       if (!buddy) {
-        return new Response(JSON.stringify({ error: 'Buddy not found' }), { status: 404 });
+        return NextResponse.json({ error: 'User not found' }, { status: 404 });
       }
-      return new Response(JSON.stringify(buddy), { status: 200 });
+      return NextResponse.json(buddy);
     }
 
-    // 2) Build base query: show everyone
-    let query = {};
-
-    // 3) If searching, filter by name OR email
+    // Build query: empty by default, or filter by name if `search` provided
+    const query = {};
     if (search) {
-      query = {
-        $or: [
-          { name:  { $regex: search, $options: 'i' } },
-          { email: { $regex: search, $options: 'i' } }
-        ]
-      };
+      query.name = { $regex: search, $options: 'i' };
     }
 
-    const buddies = await User.find(query)
-      .select('name email avatar status subjects availability');
+    // Fetch all users matching the query
+    const buddies = await User.find(query);
+    return NextResponse.json(buddies);
+  } catch (err) {
+    console.error("Error fetching study buddies:", err);
+    return NextResponse.json({ error: 'Failed to fetch study buddies' }, { status: 500 });
+  }
+}
 
-    return new Response(JSON.stringify(buddies), { status: 200 });
-  } catch (error) {
-    console.error("Error fetching study buddies:", error);
-    return new Response(
-      JSON.stringify({ error: 'Failed to fetch study buddies' }),
-      { status: 500 }
-    );
+export async function POST(req) {
+  await dbConnect();
+  try {
+    const payload = await req.json();
+    const newUser = await User.create(payload);
+    return NextResponse.json(newUser, { status: 201 });
+  } catch (err) {
+    console.error("Error creating buddy:", err);
+    return NextResponse.json({ error: err.message }, { status: 400 });
   }
 }
