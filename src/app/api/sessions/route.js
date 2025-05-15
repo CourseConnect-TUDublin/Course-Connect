@@ -1,44 +1,70 @@
 // /src/app/api/sessions/route.js
 import dbConnect from '../../../utils/dbConnect';
 import Session from '../../../models/Session';
+import { NextResponse } from 'next/server';
 
-/**
- * POST /api/sessions
- * Creates a new study session.
- */
 export async function POST(request) {
   await dbConnect();
   try {
-    const { tutor, student, startTime, endTime } = await request.json();
+    const { hostId, participantIds, datetime } = await request.json();
 
-    const newSession = new Session({
-      tutor,
-      student,
-      startTime: new Date(startTime),
-      endTime: new Date(endTime),
-      status: 'pending',
+    const startTime = new Date(datetime);
+    const endTime   = new Date(startTime.getTime() + 60 * 60 * 1000); // +1h
+
+    // Create the session
+    const sessionDoc = new Session({
+      tutor:     hostId,
+      student:   participantIds,
+      startTime,
+      endTime,
+      status:    'pending'
     });
-    
-    await newSession.save();
-    
-    return new Response(JSON.stringify(newSession), { status: 201 });
+    await sessionDoc.save();
+
+    // Populate tutor and student before returning
+    const populated = await Session.findById(sessionDoc._id)
+      .populate('tutor',   'name avatar')
+      .populate('student', 'name avatar');
+
+    return NextResponse.json(populated, { status: 201 });
   } catch (error) {
     console.error('Error creating session:', error);
-    return new Response(JSON.stringify({ error: 'Failed to create session' }), { status: 400 });
+    return NextResponse.json(
+      { error: error.message || 'Failed to create session' },
+      { status: 400 }
+    );
   }
 }
 
-/**
- * GET /api/sessions
- * Fetches all study sessions.
- */
-export async function GET() {
+export async function GET(request) {
   await dbConnect();
   try {
-    const sessions = await Session.find({});
-    return new Response(JSON.stringify(sessions), { status: 200 });
+    const url     = new URL(request.url);
+    const userId  = url.searchParams.get('user');
+
+    let query = {};
+
+    // If a userId is provided, only fetch sessions where
+    // that user is the tutor or a student
+    if (userId) {
+      query = {
+        $or: [
+          { tutor: userId },
+          { student: userId }
+        ]
+      };
+    }
+
+    const sessions = await Session.find(query)
+      .populate('tutor',   'name avatar')
+      .populate('student', 'name avatar');
+
+    return NextResponse.json(sessions, { status: 200 });
   } catch (error) {
     console.error('Error fetching sessions:', error);
-    return new Response(JSON.stringify({ error: 'Failed to fetch sessions' }), { status: 400 });
+    return NextResponse.json(
+      { error: error.message || 'Failed to fetch sessions' },
+      { status: 400 }
+    );
   }
 }
