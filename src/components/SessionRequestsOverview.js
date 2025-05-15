@@ -14,7 +14,7 @@ import {
   CircularProgress
 } from "@mui/material";
 
-export default function SessionRequestsOverview({ currentUser }) {
+export default function SessionRequestsOverview() {
   const { data: session } = useSession();
   const userId = session?.user?.id;
   const [requests, setRequests] = useState(null);
@@ -24,41 +24,72 @@ export default function SessionRequestsOverview({ currentUser }) {
   useEffect(() => {
     if (!userId) return;
     setLoading(true);
-    fetch("/api/sessions")
-      .then(r => r.json())
-      .then(all => {
-        // find sessions where I'm invited & status is pending
-        const mine = all.filter(s =>
-          s.status === "pending" &&
-          s.participants.some(p => p._id === userId)
-        );
-        setRequests(mine);
+    setError(null);
+
+    // Fetch only pending sessions for this user
+    fetch(`/api/sessions?participantId=${userId}&status=pending`)
+      .then(async (r) => {
+        if (!r.ok) throw new Error(await r.text());
+        const data = await r.json();
+        console.log("SessionRequestsOverview fetched:", data);
+        return data;
       })
-      .catch(e => setError(e.message))
+      .then((all) => {
+        setRequests(all);
+      })
+      .catch((e) => {
+        console.error("SessionRequestsOverview error:", e);
+        setError(e.message);
+      })
       .finally(() => setLoading(false));
   }, [userId]);
 
   const handleConfirm = async (sessionId) => {
-    // Mark the request confirmed
     await fetch(`/api/sessions/${sessionId}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ status: "confirmed" })
     });
-    // Remove it from the local list
-    setRequests(reqs => reqs.filter(r => r._id !== sessionId));
+    // remove from list
+    setRequests((prev) => prev.filter((r) => r._id !== sessionId));
   };
 
-  if (loading) return <CircularProgress size={24} />;
-  if (error)   return <Typography color="error">{error}</Typography>;
-  if (!requests || requests.length === 0) {
-    return <Typography>No session requests.</Typography>;
+  if (loading) {
+    return (
+      <Box sx={{ textAlign: "center", py: 2 }}>
+        <CircularProgress size={24} />
+      </Box>
+    );
+  }
+  if (error) {
+    return (
+      <Typography color="error" sx={{ textAlign: "center", py: 2 }}>
+        {error}
+      </Typography>
+    );
+  }
+  if (!requests?.length) {
+    return (
+      <Typography sx={{ textAlign: "center", py: 2 }}>
+        No session requests.
+      </Typography>
+    );
   }
 
   return (
     <List>
       {requests.map((s) => (
-        <ListItem key={s._id} alignItems="flex-start" divider>
+        <ListItem key={s._id} alignItems="flex-start" divider
+          secondaryAction={
+            <Button
+              variant="contained"
+              size="small"
+              onClick={() => handleConfirm(s._id)}
+            >
+              Confirm
+            </Button>
+          }
+        >
           <ListItemAvatar>
             <Avatar src={s.host.avatar} alt={s.host.name} />
           </ListItemAvatar>
@@ -66,13 +97,6 @@ export default function SessionRequestsOverview({ currentUser }) {
             primary={`Session on ${new Date(s.datetime).toLocaleString()}`}
             secondary={`Host: ${s.host.name}`}
           />
-          <Button
-            variant="contained"
-            size="small"
-            onClick={() => handleConfirm(s._id)}
-          >
-            Confirm
-          </Button>
         </ListItem>
       ))}
     </List>
