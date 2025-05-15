@@ -1,8 +1,10 @@
+// src/components/StudyBuddyList.js
 "use client";
 
 import React, { useState, useEffect, useMemo } from "react";
 import { useSession } from "next-auth/react";
 import {
+  Box,
   TextField,
   List,
   ListItem,
@@ -12,8 +14,9 @@ import {
   ListItemText,
   Badge,
   CircularProgress,
-  Box,
   Typography,
+  ToggleButton,
+  ToggleButtonGroup,
   Button
 } from "@mui/material";
 import { debounce } from "lodash";
@@ -23,78 +26,102 @@ import SessionRequestForm from "./SessionRequestForm";
 export default function StudyBuddyList() {
   const { data: session } = useSession();
   const currentId = session?.user?.id;
-  const [buddies, setBuddies] = useState([]);
-  const [search, setSearch] = useState("");
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState(null);
 
-  // For inline request form
+  const [buddies, setBuddies]         = useState([]);
+  const [search, setSearch]           = useState("");
+  const [loading, setLoading]         = useState(false);
+  const [error, setError]             = useState(null);
+  const [filter, setFilter]           = useState("all");  // all | online
   const [requestBuddyId, setRequestBuddyId] = useState(null);
-  const [formOpen, setFormOpen] = useState(false);
+  const [formOpen, setFormOpen]       = useState(false);
 
-  // Debounced fetcher
-  const fetchBuddies = useMemo(
-    () =>
-      debounce(async (q) => {
-        setLoading(true);
-        setError(null);
-        try {
-          const url = `/api/studybuddies${q ? `?search=${encodeURIComponent(q)}` : ""}`;
-          const res = await fetch(url);
-          if (!res.ok) throw new Error(res.statusText);
-          let data = await res.json();
-          // exclude self
-          if (currentId) data = data.filter((b) => b._id !== currentId);
-          setBuddies(data);
-        } catch (e) {
-          setError(e.message);
-        } finally {
-          setLoading(false);
-        }
-      }, 300),
-    [currentId]
-  );
+  // Debounced fetch
+  const fetchBuddies = useMemo(() =>
+    debounce(async q => {
+      setLoading(true);
+      setError(null);
+      try {
+        const url = `/api/studybuddies${q ? `?search=${encodeURIComponent(q)}` : ""}`;
+        console.log("Fetching", url);
+        const res = await fetch(url);
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        let data = await res.json();
+        console.log("Data", data);
+        // Exclude current user
+        if (currentId) data = data.filter(b => b._id !== currentId);
+        setBuddies(data);
+      } catch (e) {
+        console.error(e);
+        setError(e.message);
+      } finally {
+        setLoading(false);
+      }
+    }, 300)
+  , [currentId]);
 
   useEffect(() => {
     fetchBuddies(search);
-    return () => {
-      fetchBuddies.cancel();
-    };
+    return () => fetchBuddies.cancel();
   }, [search, fetchBuddies]);
+
+  // Apply online filter
+  const displayed = filter === "online"
+    ? buddies.filter(b => b.status === "online")
+    : buddies;
 
   return (
     <Box>
-      <TextField
-        fullWidth
-        placeholder="Search study buddies..."
-        value={search}
-        onChange={(e) => setSearch(e.target.value)}
-        sx={{ mb: 2 }}
-      />
+      {/* Search + Filter */}
+      <Box sx={{ display: "flex", gap: 2, mb: 2 }}>
+        <TextField
+          fullWidth
+          placeholder="Search buddies…"
+          value={search}
+          onChange={e => setSearch(e.target.value)}
+        />
+        <ToggleButtonGroup
+          value={filter}
+          exclusive
+          onChange={(_, v) => v && setFilter(v)}
+          size="small"
+        >
+          <ToggleButton value="all">All</ToggleButton>
+          <ToggleButton value="online">Online Now</ToggleButton>
+        </ToggleButtonGroup>
+      </Box>
 
+      {/* Loading / Error / Empty */}
       {loading && (
         <Box sx={{ textAlign: "center", py: 2 }}>
           <CircularProgress size={24} />
         </Box>
       )}
       {error && (
-        <Typography color="error" sx={{ textAlign: "center", mb: 2 }}>
+        <Typography color="error" sx={{ textAlign: "center", py: 2 }}>
           {error}
         </Typography>
       )}
+      {!loading && !error && displayed.length === 0 && (
+        <Typography sx={{ textAlign: "center", py: 2 }}>
+          No study buddies found.
+        </Typography>
+      )}
 
-      {!loading && !error && (
+      {/* Buddy List */}
+      {!loading && !error && displayed.length > 0 && (
         <List>
-          {buddies.map(({ _id, name, avatar, status }) => {
+          {displayed.map(({ _id, name, avatar, status }) => {
             const stat = status || "offline";
             const badgeColor = {
-              online: "success",
+              online:  "success",
               offline: "default",
-              busy: "warning"
-            }[stat];
+              busy:    "warning"
+            }[stat] || "default";
 
             return (
-              <ListItem key={_id} divider
+              <ListItem
+                key={_id}
+                divider
                 secondaryAction={
                   <Button
                     size="small"
@@ -106,6 +133,7 @@ export default function StudyBuddyList() {
                     Request
                   </Button>
                 }
+                disablePadding
               >
                 <ListItemButton component={Link} href={`/StudyBuddy/${_id}`}>
                   <ListItemAvatar>
@@ -130,14 +158,15 @@ export default function StudyBuddyList() {
         </List>
       )}
 
+      {/* Session Request Dialog */}
       <SessionRequestForm
         open={formOpen}
+        buddyId={requestBuddyId}
         onClose={(didCreate) => {
           setFormOpen(false);
           setRequestBuddyId(null);
-          // optionally refresh or show a toast if didCreate
+          // optionally refetch or notify on didCreate
         }}
-        buddyId={requestBuddyId}
       />
     </Box>
   );
