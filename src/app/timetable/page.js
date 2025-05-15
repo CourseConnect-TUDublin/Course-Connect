@@ -34,7 +34,7 @@ function Navbar() {
     <AppBar position="static" color="default" elevation={1} sx={{ mb: 3 }}>
       <Toolbar>
         <Typography sx={{ flexGrow: 1 }}>TU Dublin – Timetable</Typography>
-        <Link href="/dashboard" passHref>
+        <Link href="/dashboard" passHref legacyBehavior>
           <Button>Home</Button>
         </Link>
       </Toolbar>
