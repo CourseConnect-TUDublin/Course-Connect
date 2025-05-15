@@ -1,28 +1,24 @@
-// /src/app/api/session-requests/route.js
+// src/app/api/session-requests/route.js
 import dbConnect from '../../../utils/dbConnect';
 import SessionRequest from '../../../models/SessionRequest';
-
-export async function POST(request) {
-  await dbConnect();
-  try {
-    const { requester, buddy, preferredTimes, message } = await request.json();
-    const newRequest = new SessionRequest({ requester, buddy, preferredTimes, message });
-    await newRequest.save();
-    return new Response(JSON.stringify(newRequest), { status: 201 });
-  } catch (error) {
-    console.error("Error creating session request:", error);
-    return new Response(JSON.stringify({ error: 'Failed to create session request' }), { status: 400 });
-  }
-}
+import { NextResponse } from 'next/server';
 
 export async function GET(request) {
   await dbConnect();
-  try {
-    // Optionally, filter by requester or buddy using query parameters
-    const requests = await SessionRequest.find({}).populate('requester buddy');
-    return new Response(JSON.stringify(requests), { status: 200 });
-  } catch (error) {
-    console.error("Error fetching session requests:", error);
-    return new Response(JSON.stringify({ error: 'Failed to fetch session requests' }), { status: 400 });
-  }
+  const { searchParams } = new URL(request.url);
+  const toUser = searchParams.get('to');
+  if (!toUser) return NextResponse.json([], { status: 200 });
+  
+  const requests = await SessionRequest
+    .find({ to: toUser, status: 'pending' })
+    .populate('from', 'name avatar')
+    .populate('sessionId', 'datetime');
+  return NextResponse.json(requests);
+}
+
+export async function POST(request) {
+  await dbConnect();
+  const { sessionId, from, to } = await request.json();
+  const newReq = await SessionRequest.create({ sessionId, from, to });
+  return NextResponse.json(newReq, { status: 201 });
 }

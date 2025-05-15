@@ -1,16 +1,28 @@
-// /src/models/SessionRequest.js
-const mongoose = require('mongoose');
+// src/models/SessionRequest.js
+import mongoose from 'mongoose';
 
-const sessionRequestSchema = new mongoose.Schema({
-  requester: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
-  buddy: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
-  preferredTimes: { type: [String], required: true },
-  message: { type: String },
+const SessionRequestSchema = new mongoose.Schema({
+  sessionId: {
+    type: mongoose.Types.ObjectId,
+    ref: 'Session',
+    required: true
+  },
+  from: {
+    type: mongoose.Types.ObjectId,
+    ref: 'User',
+    required: true
+  },
+  to: {
+    type: mongoose.Types.ObjectId,
+    ref: 'User',
+    required: true
+  },
   status: {
     type: String,
-    enum: ['pending', 'accepted', 'declined'],
+    enum: ['pending','accepted','declined'],
     default: 'pending'
-  }
-}, { timestamps: true });
+  },
+  createdAt: { type: Date, default: Date.now }
+});
 
-module.exports = mongoose.models.SessionRequest || mongoose.model('SessionRequest', sessionRequestSchema);
+export default mongoose.models.SessionRequest || mongoose.model('SessionRequest', SessionRequestSchema);
