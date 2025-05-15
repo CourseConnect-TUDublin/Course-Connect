@@ -5,9 +5,12 @@ import React from "react";
 import { AppBar, Toolbar, Typography, IconButton, Box, Button } from "@mui/material";
 import MenuIcon from "@mui/icons-material/Menu";
 import { usePathname } from "next/navigation";
+import { useSession } from "next-auth/react";
+import NotificationsBell from "./NotificationsBell";
 
 export default function Header({ toggleSidebar, drawerWidth }) {
   const pathname = usePathname();
+  const { data: session } = useSession();
 
   // Define your navigation links if needed
   const navItems = [
@@ -32,7 +35,7 @@ export default function Header({ toggleSidebar, drawerWidth }) {
         <Box display="flex" alignItems="center">
           {drawerWidth && (
             <IconButton
-              onClick={toggleSidebar && toggleSidebar(true)}
+              onClick={() => toggleSidebar(true)}
               color="inherit"
               edge="start"
               sx={{ mr: 2, display: { xs: "block", md: "none" } }}
@@ -45,7 +48,7 @@ export default function Header({ toggleSidebar, drawerWidth }) {
           </Typography>
         </Box>
         <Box sx={{ display: "flex", alignItems: "center" }}>
-          {/* Example: Navigation Links */}
+          {/* Navigation Links */}
           {navItems.map((item) => (
             <Button
               key={item.label}
@@ -59,7 +62,13 @@ export default function Header({ toggleSidebar, drawerWidth }) {
               {item.label}
             </Button>
           ))}
-          {/* Other header elements like search, notifications, user profile */}
+
+          {/* Notifications Bell */}
+          {session?.user?.id && (
+            <NotificationsBell userId={session.user.id} />
+          )}
+
+          {/* Optionally: user profile/avatar button */}
         </Box>
       </Toolbar>
     </AppBar>

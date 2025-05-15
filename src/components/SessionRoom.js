@@ -1,7 +1,8 @@
-// src/app/session/[id]/page.js
+// src/components/SessionRoom.js
+"use client";
 
-import React, { useState, useEffect } from 'react';
-import { useParams, useRouter } from 'next/navigation';
+import React, { useState, useEffect } from "react";
+import { useSession } from "next-auth/react";
 import {
   Box,
   Typography,
@@ -9,18 +10,17 @@ import {
   List,
   ListItem,
   ListItemAvatar,
-  ListItemText,
   Avatar,
+  ListItemText,
   Button,
   CircularProgress
-} from '@mui/material';
-import Chat from '../../../components/Chat';
-import { useSession } from 'next-auth/react';
+} from "@mui/material";
+import Chat from "./Chat";
 
-export default function SessionPage() {
-  const { id: sessionId } = useParams();
-  const router = useRouter();
-  const { data: session, status: authStatus } = useSession();
+export default function SessionRoom({ sessionId }) {
+  const { data: session } = useSession();
+  const userId = session?.user?.id;
+
   const [sessionData, setSessionData] = useState(null);
   const [timer, setTimer] = useState(0);
   const [loading, setLoading] = useState(true);
@@ -29,46 +29,39 @@ export default function SessionPage() {
   // Fetch session details
   useEffect(() => {
     if (!sessionId) return;
-    const fetchSession = async () => {
-      try {
-        const res = await fetch(`/api/sessions/${sessionId}`);
+    setLoading(true);
+    setError(null);
+    fetch(`/api/sessions/${sessionId}`)
+      .then(async res => {
         if (!res.ok) {
           const text = await res.text();
-          throw new Error(`Error ${res.status}: ${text}`);
+          throw new Error(text);
         }
-        const data = await res.json();
-        setSessionData(data);
-      } catch (err) {
-        console.error("Failed to load session:", err);
-        setError(err.message);
-      } finally {
-        setLoading(false);
-      }
-    };
-    fetchSession();
+        return res.json();
+      })
+      .then(data => setSessionData(data))
+      .catch(err => setError(err.message))
+      .finally(() => setLoading(false));
   }, [sessionId]);
 
   // Timer for elapsed time since startTime
   useEffect(() => {
     if (!sessionData?.startTime) return;
     const startTs = new Date(sessionData.startTime).getTime();
-    const update = () => {
-      const now = Date.now();
-      setTimer(Math.floor((now - startTs) / 1000));
+    const updateTimer = () => {
+      setTimer(Math.floor((Date.now() - startTs) / 1000));
     };
-    update();
-    const iv = setInterval(update, 1000);
+    updateTimer();
+    const iv = setInterval(updateTimer, 1000);
     return () => clearInterval(iv);
   }, [sessionData?.startTime]);
-
-  const currentUser = session?.user?.name ?? 'Guest';
 
   const handleEndSession = async () => {
     try {
       const res = await fetch(`/api/sessions/${sessionId}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ status: 'ended' }),
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status: "ended" }),
       });
       if (!res.ok) {
         const text = await res.text();
@@ -77,20 +70,21 @@ export default function SessionPage() {
       const updated = await res.json();
       setSessionData(updated);
     } catch (err) {
-      console.error("Failed to end session:", err);
+      console.error("Error ending session:", err);
     }
   };
 
   if (loading) {
     return (
-      <Box sx={{ textAlign: 'center', py: 4 }}>
+      <Box sx={{ textAlign: "center", py: 4 }}>
         <CircularProgress />
       </Box>
     );
   }
+
   if (error) {
     return (
-      <Typography color="error" sx={{ textAlign: 'center', py: 2 }}>
+      <Typography color="error" sx={{ textAlign: "center", py: 2 }}>
         {error}
       </Typography>
     );
@@ -109,7 +103,7 @@ export default function SessionPage() {
           <strong>Status:</strong> {sessionData.status}
         </Typography>
         <Typography variant="body1" sx={{ mt: 2 }}>
-          <strong>Host:</strong> {sessionData.host?.name ?? 'Unknown'}
+          <strong>Host:</strong> {sessionData.host?.name ?? "Unknown"}
         </Typography>
         <Typography variant="body1" sx={{ mt: 2 }}>
           <strong>Participants:</strong>
@@ -118,17 +112,20 @@ export default function SessionPage() {
           {sessionData.participants?.map((p) => (
             <ListItem key={p._id}>
               <ListItemAvatar>
-                <Avatar src={p.avatar ?? '/default-avatar.png'} alt={p.name} />
+                <Avatar
+                  src={p.avatar ?? "/default-avatar.png"}
+                  alt={p.name}
+                />
               </ListItemAvatar>
-              <ListItemText primary={p.name ?? 'Unknown'} />
+              <ListItemText primary={p.name ?? "Unknown"} />
             </ListItem>
           ))}
         </List>
         <Typography variant="body1" sx={{ mt: 2 }}>
-          <strong>Elapsed Time:</strong>{' '}
-          {Math.floor(timer / 60)}:{String(timer % 60).padStart(2, '0')}
+          <strong>Elapsed Time:</strong>{" "}
+          {Math.floor(timer / 60)}:{String(timer % 60).padStart(2, "0")}
         </Typography>
-        {sessionData.host?._id === session?.user?.id && (
+        {sessionData.host?._id === userId && sessionData.status !== "ended" && (
           <Button
             variant="contained"
             color="error"
@@ -141,7 +138,10 @@ export default function SessionPage() {
       </Paper>
 
       <Paper sx={{ p: 3 }}>
-        <Chat room={`session-${sessionData._id}`} currentUser={currentUser} />
+        <Chat
+          room={`session-${sessionData._id}`}
+          currentUser={session?.user?.name ?? "Guest"}
+        />
       </Paper>
     </Box>
   );
