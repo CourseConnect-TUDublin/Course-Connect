@@ -1,7 +1,8 @@
 // src/server/socket.js
-const { Server } = require('socket.io');
-const ChatMessage = require('../models/ChatMessage'); // adjust path as needed
 
+const { Server } = require('socket.io');
+const ChatMessage = require('../models/ChatMessage');
+const Notification = require('../models/Notification'); // add this
 let io;
 
 // Track online users per room: { [room]: Map<socketId, { userId, userName }> }
@@ -10,9 +11,15 @@ const roomUsers = {};
 function initSockets(server) {
   if (io) return io; // prevent re-initializing
 
+  // Configure CORS based on environment
+  const devOrigins  = ['http://localhost:3000', 'http://localhost:4000'];
+  const prodOrigins = [process.env.FRONTEND_URL]; // ensure FRONTEND_URL is set in prod
+
   io = new Server(server, {
     cors: {
-      origin: '*', // TODO: restrict to your frontend origin in production
+      origin: process.env.NODE_ENV === 'production' ? prodOrigins : devOrigins,
+      methods: ['GET', 'POST'],
+      credentials: true,
     },
   });
 
@@ -24,14 +31,12 @@ function initSockets(server) {
       socket.join(room);
       console.log(`Socket ${socket.id} joined room ${room}`);
 
-      // Initialize room set if needed
-      if (!roomUsers[room]) {
-        roomUsers[room] = new Map();
-      }
+      // Initialize room map if needed
+      if (!roomUsers[room]) roomUsers[room] = new Map();
       // Track this socket's user
       roomUsers[room].set(socket.id, { userId, userName: user });
 
-      // Load and emit chat history to this socket
+      // Load and emit chat history
       try {
         const history = await ChatMessage.find({ room })
           .sort('timestamp')
@@ -48,16 +53,17 @@ function initSockets(server) {
         timestamp: Date.now(),
       });
 
-      // Emit updated online users list to room
+      // Emit updated online users list
       const users = Array.from(roomUsers[room].values()).map(u => u.userName);
       io.to(room).emit('onlineUsers', users);
     });
 
-    // Handle incoming chat messages: broadcast & persist
+    // Handle incoming chat messages: broadcast, persist, and notify
     socket.on('chatMessage', async ({ room, user, userId, message }) => {
       const payload = { user, message, timestamp: Date.now() };
       io.to(room).emit('chatMessage', payload);
 
+      // Persist chat message
       try {
         await ChatMessage.create({
           room,
@@ -68,6 +74,24 @@ function initSockets(server) {
         });
       } catch (err) {
         console.error('Error saving chat message:', err);
+      }
+
+      // DM notification: if this is a one-on-one room (ids separated by '_')
+      const parts = room.split('_');
+      if (parts.length === 2) {
+        const [idA, idB] = parts;
+        const recipientId = userId === idA ? idB : idA;
+        try {
+          await Notification.create({
+            userId:         recipientId,
+            conversationId: room,
+            type:           'dmMessage',
+            link:           `/dm/${room}`,
+            createdAt:      new Date(),
+          });
+        } catch (err) {
+          console.error('Error creating DM notification:', err);
+        }
       }
     });
 
@@ -85,7 +109,6 @@ function initSockets(server) {
         if (room === socket.id) continue;
 
         const userInfo = roomUsers[room]?.get(socket.id);
-        // Broadcast leave message
         io.to(room).emit('chatMessage', {
           user: 'System',
           message: `${userInfo?.userName ?? 'A user'} has left the room.`,

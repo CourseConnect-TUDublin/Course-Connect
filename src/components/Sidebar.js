@@ -1,8 +1,9 @@
+// src/components/Sidebar.js
 "use client";
 
 import React, { useState } from "react";
 import Link from "next/link";
-import { List, ListItem, Button, Popover, Typography } from "@mui/material";
+import { List, ListItem, Button, Popover, Typography, Box } from "@mui/material";
 import {
   Home,
   Dashboard as DashboardIcon,
@@ -10,7 +11,6 @@ import {
   CalendarToday,
   CheckBox,
   People,
-  Chat,
   Help,
   Settings,
   Archive as ArchiveIcon,
@@ -23,9 +23,7 @@ const sidebarItems = [
   { label: "Timetable", route: "/timetable", icon: <CalendarToday /> },
   { label: "Flashcards", route: "/flashcards", icon: <Assignment /> },
   { label: "Focus Timer", route: "/FocusTimer", icon: <CheckBox /> },
-  // Direct Study Hub link
   { label: "Study Hub", route: "/studyhub", icon: <People /> },
-  // Optional nested dropdown for study-specific subpages
   {
     label: "Study Tools",
     route: "/studyhub",
@@ -68,22 +66,22 @@ export default function Sidebar() {
           onMouseEnter={(e) => handleMouseEnter(e, item)}
           onMouseLeave={handleMouseLeave}
         >
-          <Link href={item.route} passHref legacyBehavior>
-            <Button
-              startIcon={item.icon}
-              fullWidth
-              sx={{
-                justifyContent: "flex-start",
-                textTransform: "none",
-                color: "inherit",
-                padding: "12px 16px",
-                transition: "background-color 0.3s ease",
-                "&:hover": { backgroundColor: "#f0f0f0" },
-              }}
-            >
-              {item.label}
-            </Button>
-          </Link>
+          <Button
+            component={Link}
+            href={item.route}
+            startIcon={item.icon}
+            fullWidth
+            sx={{
+              justifyContent: "flex-start",
+              textTransform: "none",
+              color: "inherit",
+              padding: "12px 16px",
+              transition: "background-color 0.3s ease",
+              "&:hover": { backgroundColor: "#f0f0f0" },
+            }}
+          >
+            {item.label}
+          </Button>
           {item.subItems && activeItem?.label === item.label && (
             <Popover
               open={open}
@@ -103,20 +101,23 @@ export default function Sidebar() {
                 sx: { mt: 1 },
               }}
             >
-              {item.subItems.map((subItem) => (
-                <Link key={subItem.label} href={subItem.route} passHref legacyBehavior>
+              <Box>
+                {item.subItems.map((subItem) => (
                   <Button
+                    key={subItem.label}
+                    component={Link}
+                    href={subItem.route}
+                    fullWidth
                     sx={{
-                      width: "100%",
-                      textTransform: "none",
                       justifyContent: "flex-start",
+                      textTransform: "none",
                       padding: "8px 16px",
                     }}
                   >
                     {subItem.label}
                   </Button>
-                </Link>
-              ))}
+                ))}
+              </Box>
             </Popover>
           )}
         </ListItem>

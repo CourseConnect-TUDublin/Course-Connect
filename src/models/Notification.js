@@ -7,18 +7,25 @@ const NotificationSchema = new mongoose.Schema({
     ref: "User",
     required: true
   },
+  // for session notifications
   sessionId: {
     type: mongoose.Schema.Types.ObjectId,
-    ref: "Session",
-    required: true
+    ref: "Session"
+  },
+  // for DM notifications
+  conversationId: {
+    type: String
   },
   type: {
     type: String,
-    required: true  // e.g. 'sessionConfirmed'
+    required: true  // e.g. 'sessionConfirmed', 'dmMessage'
   },
   read: {
     type: Boolean,
     default: false
+  },
+  link: {
+    type: String    // where to send the user when they click the bell
   },
   createdAt: {
     type: Date,
