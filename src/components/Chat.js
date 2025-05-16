@@ -5,17 +5,16 @@ import React, { useState, useEffect, useRef } from "react";
 import io from "socket.io-client";
 import {
   Box,
-  List,
-  ListItem,
-  ListItemText,
   TextField,
-  Button,
+  IconButton,
   Typography,
+  useTheme,
+  Avatar,
+  Stack
 } from "@mui/material";
+import SendIcon from "@mui/icons-material/Send";
 
 let socket;
-
-// initialize socket once
 function getSocket() {
   if (!socket) {
     socket = io(); // adjust URL/options if needed
@@ -24,49 +23,44 @@ function getSocket() {
 }
 
 export default function Chat({ room, currentUser, currentUserId }) {
+  const theme = useTheme();
   const [messages, setMessages] = useState([]);
   const [onlineUsers, setOnlineUsers] = useState([]);
   const [typingUsers, setTypingUsers] = useState([]);
   const [input, setInput] = useState("");
   const listRef = useRef(null);
-  const typingTimeout = useRef(null);
   const isTyping = useRef(false);
+  const typingTimeout = useRef(null);
 
   useEffect(() => {
     const sock = getSocket();
-
-    // join room, send join payload
     sock.emit("joinRoom", { room, user: currentUser, userId: currentUserId });
 
-    // receive chat history
     sock.on("history", (history) => {
       setMessages(
         history.map((m) => ({
           user: m.userName,
           message: m.message,
           timestamp: m.timestamp,
+          userId: m.userId.toString(),
         }))
       );
     });
 
-    // new chat messages
     sock.on("chatMessage", (msg) => {
       setMessages((prev) => [...prev, msg]);
     });
 
-    // online users list update
     sock.on("onlineUsers", (users) => {
       setOnlineUsers(users);
     });
 
-    // someone started typing
     sock.on("typing", ({ user }) => {
       setTypingUsers((prev) =>
         prev.includes(user) ? prev : [...prev, user]
       );
     });
 
-    // someone stopped typing
     sock.on("stopTyping", ({ user }) => {
       setTypingUsers((prev) => prev.filter((u) => u !== user));
     });
@@ -80,17 +74,15 @@ export default function Chat({ room, currentUser, currentUserId }) {
     };
   }, [room, currentUser, currentUserId]);
 
-  // auto-scroll on new messages
   useEffect(() => {
     if (listRef.current) {
       listRef.current.scrollTop = listRef.current.scrollHeight;
     }
   }, [messages]);
 
-  // handle input changes and typing indicator
   const handleInputChange = (e) => {
-    const value = e.target.value;
-    setInput(value);
+    const val = e.target.value;
+    setInput(val);
 
     const sock = getSocket();
     if (!isTyping.current) {
@@ -105,16 +97,16 @@ export default function Chat({ room, currentUser, currentUserId }) {
   };
 
   const sendMessage = () => {
-    if (!input.trim()) return;
+    const text = input.trim();
+    if (!text) return;
     const payload = {
       room,
       user: currentUser,
       userId: currentUserId,
-      message: input.trim(),
+      message: text,
     };
     getSocket().emit("chatMessage", payload);
     setInput("");
-    // immediately stop typing
     if (isTyping.current) {
       getSocket().emit("stopTyping", { room, user: currentUser });
       isTyping.current = false;
@@ -123,56 +115,107 @@ export default function Chat({ room, currentUser, currentUserId }) {
   };
 
   return (
-    <Box>
-      <Box sx={{ mb: 1 }}>
-        <Typography variant="body2" color="textSecondary">
-          Online: {onlineUsers.join(", ") || "—"}
-        </Typography>
-      </Box>
+    <Box
+      sx={{
+        display: "flex",
+        flexDirection: "column",
+        height: "100%",
+        border: `1px solid ${theme.palette.divider}`,
+        borderRadius: 2,
+      }}
+    >
+      {/* Messages List */}
       <Box
         ref={listRef}
         sx={{
-          border: "1px solid #ccc",
-          borderRadius: 1,
-          p: 1,
-          height: 300,
+          flexGrow: 1,
           overflowY: "auto",
-          mb: 1,
-          backgroundColor: "#f9f9f9",
+          p: 2,
+          backgroundColor: theme.palette.background.default,
         }}
       >
-        <List dense>
-          {messages.map((m, idx) => (
-            <ListItem key={idx} alignItems="flex-start">
-              <ListItemText
-                primary={`${m.user} · ${new Date(m.timestamp).toLocaleTimeString()}`}
-                secondary={m.message}
-              />
-            </ListItem>
-          ))}
-        </List>
+        {messages.map((m, i) => {
+          const isSelf = m.userId === currentUserId;
+          return (
+            <Box
+              key={i}
+              sx={{
+                display: "flex",
+                flexDirection: "column",
+                alignItems: isSelf ? "flex-end" : "flex-start",
+                mb: 1.5,
+              }}
+            >
+              <Stack direction={isSelf ? "row-reverse" : "row"} spacing={1} alignItems="center">
+                <Avatar sx={{ width: 24, height: 24 }}>
+                  {m.user.charAt(0).toUpperCase()}
+                </Avatar>
+                <Box
+                  sx={{
+                    maxWidth: "70%",
+                    p: 1.5,
+                    borderRadius: 2,
+                    bgcolor: isSelf
+                      ? theme.palette.primary.main
+                      : theme.palette.grey[200],
+                    color: isSelf
+                      ? theme.palette.primary.contrastText
+                      : theme.palette.text.primary,
+                  }}
+                >
+                  <Typography variant="body2">{m.message}</Typography>
+                </Box>
+              </Stack>
+              <Typography
+                variant="caption"
+                sx={{
+                  mt: 0.5,
+                  color: theme.palette.text.secondary,
+                }}
+              >
+                {m.user} ·{" "}
+                {new Date(m.timestamp).toLocaleTimeString([], {
+                  hour: "2-digit",
+                  minute: "2-digit",
+                })}
+              </Typography>
+            </Box>
+          );
+        })}
         {typingUsers.length > 0 && (
           <Typography variant="caption" color="textSecondary">
-            {typingUsers.join(", ")} {typingUsers.length === 1 ? "is" : "are"} typing…
+            {typingUsers.join(", ")}{" "}
+            {typingUsers.length === 1 ? "is" : "are"} typing…
           </Typography>
         )}
       </Box>
-      <Box sx={{ display: "flex", gap: 1 }}>
+
+      {/* Input Bar */}
+      <Box
+        sx={{
+          display: "flex",
+          alignItems: "center",
+          p: 1,
+          borderTop: `1px solid ${theme.palette.divider}`,
+        }}
+      >
         <TextField
           fullWidth
-          size="small"
           placeholder="Type a message…"
+          variant="outlined"
+          size="small"
           value={input}
           onChange={handleInputChange}
           onKeyDown={(e) => e.key === "Enter" && sendMessage()}
+          sx={{ mr: 1, bgcolor: theme.palette.background.paper, borderRadius: 1 }}
         />
-        <Button
-          variant="contained"
+        <IconButton
+          color="primary"
           onClick={sendMessage}
           disabled={!input.trim()}
         >
-          Send
-        </Button>
+          <SendIcon />
+        </IconButton>
       </Box>
     </Box>
   );

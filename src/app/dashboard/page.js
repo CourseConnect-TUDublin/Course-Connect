@@ -1,3 +1,4 @@
+// src/app/dashboard/page.js
 "use client";
 
 import React, { useState, useEffect, useCallback } from "react";
@@ -18,6 +19,7 @@ import {
   CardHeader,
   List,
   ListItem,
+  ListItemButton,
   ListItemIcon,
   ListItemText,
   TextField,
@@ -31,7 +33,7 @@ import {
   Brightness7,
   Today,
   Event,
-  Timer,
+  Timer as TimerIcon,
   Announcement,
   Note,
   CheckCircle,
@@ -45,31 +47,41 @@ import { motion } from "framer-motion";
 
 // --- TimetablePreview sub-component ---
 const pastelColors = [
-  "#ffe4ec", "#e6f0ff", "#e6ffe6", "#f5e6ff", "#fffbe6",
+  "#ffe4ec",
+  "#e6f0ff",
+  "#e6ffe6",
+  "#f5e6ff",
+  "#fffbe6",
 ];
 const days = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"];
+
 function getColorForEvent(course) {
   if (!course) return pastelColors[0];
   let idx = [...course].reduce((acc, c) => acc + c.charCodeAt(0), 0) % pastelColors.length;
   return pastelColors[idx];
 }
+
 function formatTime(isoString) {
   const d = new Date(isoString);
   return d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
 }
+
 function getWeekRange(baseDate = new Date()) {
   const monday = new Date(baseDate);
   monday.setDate(monday.getDate() - monday.getDay() + 1);
-  monday.setHours(0,0,0,0);
+  monday.setHours(0, 0, 0, 0);
   const sunday = new Date(monday);
   sunday.setDate(monday.getDate() + 6);
-  sunday.setHours(23,59,59,999);
+  sunday.setHours(23, 59, 59, 999);
   return { monday, sunday };
 }
+
 function groupEventsByDay(events) {
   const { monday, sunday } = getWeekRange();
   const map = {};
-  days.forEach((day) => { map[day] = []; });
+  days.forEach((day) => {
+    map[day] = [];
+  });
   events.forEach((e) => {
     const eventDate = new Date(e.fullDateTime);
     if (eventDate < monday || eventDate > sunday) return;
@@ -81,8 +93,9 @@ function groupEventsByDay(events) {
   }
   return map;
 }
+
 function TimetablePreview({ events, onOpenTimetable }) {
-  const groupedEvents = groupEventsByDay(events || []);
+  const grouped = groupEventsByDay(events || []);
   return (
     <Box>
       <Grid container spacing={1}>
@@ -102,7 +115,7 @@ function TimetablePreview({ events, onOpenTimetable }) {
                 mb: 1,
               }}
             >
-              {groupedEvents[day].length === 0 ? (
+              {grouped[day].length === 0 ? (
                 <Box
                   sx={{
                     textAlign: "center",
@@ -115,7 +128,7 @@ function TimetablePreview({ events, onOpenTimetable }) {
                   <Typography sx={{ fontSize: 13 }}>No classes scheduled</Typography>
                 </Box>
               ) : (
-                groupedEvents[day].map((event) => (
+                grouped[day].map((event) => (
                   <Box
                     key={event._id}
                     sx={{
@@ -150,12 +163,7 @@ function TimetablePreview({ events, onOpenTimetable }) {
           </Grid>
         ))}
       </Grid>
-      <Button
-        variant="contained"
-        fullWidth
-        sx={{ mt: 2 }}
-        onClick={onOpenTimetable}
-      >
+      <Button variant="contained" fullWidth sx={{ mt: 2 }} onClick={onOpenTimetable}>
         View Full Timetable
       </Button>
     </Box>
@@ -223,7 +231,7 @@ export default function CourseConnectDashboard() {
   useEffect(() => {
     let timer;
     if (running && focusTime > 0) {
-      timer = setTimeout(() => setFocusTime(focusTime - 1), 1000);
+      timer = setTimeout(() => setFocusTime((t) => t - 1), 1000);
     }
     return () => clearTimeout(timer);
   }, [running, focusTime]);
@@ -262,7 +270,7 @@ export default function CourseConnectDashboard() {
                 Course Connect
               </Typography>
               <Box sx={{ display: "flex", alignItems: "center" }}>
-                <IconButton onClick={() => setDarkMode(!darkMode)}>
+                <IconButton onClick={() => setDarkMode((m) => !m)}>
                   {darkMode ? <Brightness7 /> : <Brightness4 />}
                 </IconButton>
                 <IconButton onClick={() => router.push("/search")}>
@@ -287,18 +295,12 @@ export default function CourseConnectDashboard() {
               Welcome, {userName}!
             </Typography>
             <Grid container spacing={2} mb={4}>
-              {[{
-                icon: Event, title: "Tasks Due", value: metrics.tasksDue, route: "/TaskManager"
-              },
-              {
-                icon: Today, title: "Classes This Week", value: metrics.classesThisWeek, route: "/timetable"
-              },
-              {
-                icon: CheckCircle, title: "Deadlines", value: metrics.upcomingDeadlines, route: "/assignments"
-              },
-              {
-                icon: CheckCircle, title: "Focus Streak", value: `${metrics.focusStreak} days`, route: "/focus"
-              }].map((card, i) => (
+              {[
+                { icon: Event, title: "Tasks Due", value: metrics.tasksDue, route: "/TaskManager" },
+                { icon: Today, title: "Classes This Week", value: metrics.classesThisWeek, route: "/timetable" },
+                { icon: CheckCircle, title: "Deadlines", value: metrics.upcomingDeadlines, route: "/assignments" },
+                { icon: CheckCircle, title: "Focus Streak", value: `${metrics.focusStreak} days`, route: "/focus" },
+              ].map((card, i) => (
                 <Grid item xs={6} sm={3} key={i}>
                   <CardActionArea onClick={() => router.push(card.route)}>
                     <Card>
@@ -318,13 +320,17 @@ export default function CourseConnectDashboard() {
               <Grid item xs={12} md={4} container direction="column" spacing={3}>
                 <Grid item>
                   <Card>
-                    <CardHeader avatar={<Timer />} title="Flashcards" />
+                    <CardHeader avatar={<TimerIcon />} title="Flashcards" />
                     <Divider />
                     <List dense>
                       {flashcards.map((f, i) => (
-                        <ListItem key={i} button onClick={() => router.push(f.route)}>
-                          <ListItemIcon><Event /></ListItemIcon>
-                          <ListItemText primary={f.label} />
+                        <ListItem key={i} disablePadding>
+                          <ListItemButton onClick={() => router.push(f.route)}>
+                            <ListItemIcon>
+                              <Event />
+                            </ListItemIcon>
+                            <ListItemText primary={f.label} />
+                          </ListItemButton>
                         </ListItem>
                       ))}
                     </List>
@@ -332,7 +338,9 @@ export default function CourseConnectDashboard() {
                 </Grid>
                 <Grid item>
                   <Paper sx={{ p: 2, borderRadius: 2 }}>
-                    <Typography variant="h6" gutterBottom>Quick Actions</Typography>
+                    <Typography variant="h6" gutterBottom>
+                      Quick Actions
+                    </Typography>
                     <Box sx={{ display: "flex", flexWrap: "wrap", gap: 1 }}>
                       {quickActions.map((act) => (
                         <Button key={act.route} size="small" onClick={() => router.push(act.route)}>
@@ -348,9 +356,13 @@ export default function CourseConnectDashboard() {
                     <Divider />
                     <List dense>
                       {announcements.map((a, i) => (
-                        <ListItem key={i} button onClick={() => router.push(a.route)}>
-                          <ListItemIcon><Announcement /></ListItemIcon>
-                          <ListItemText primary={a.text} />
+                        <ListItem key={i} disablePadding>
+                          <ListItemButton onClick={() => router.push(a.route)}>
+                            <ListItemIcon>
+                              <Announcement />
+                            </ListItemIcon>
+                            <ListItemText primary={a.text} />
+                          </ListItemButton>
                         </ListItem>
                       ))}
                     </List>
@@ -361,7 +373,9 @@ export default function CourseConnectDashboard() {
               {/* Center: Timetable */}
               <Grid item xs={12} md={4}>
                 <Paper sx={{ p: 2, borderRadius: 2 }}>
-                  <Typography variant="h6" gutterBottom>Upcoming Timetable</Typography>
+                  <Typography variant="h6" gutterBottom>
+                    Upcoming Timetable
+                  </Typography>
                   <TimetablePreview
                     events={timetable}
                     onOpenTimetable={() => router.push("/timetable")}
@@ -373,18 +387,30 @@ export default function CourseConnectDashboard() {
               <Grid item xs={12} md={4} container direction="column" spacing={3}>
                 <Grid item>
                   <Card>
-                    <CardHeader avatar={<Timer />} title="Focus Timer" />
+                    <CardHeader avatar={<TimerIcon />} title="Focus Timer" />
                     <Divider />
                     <CardContent sx={{ textAlign: "center" }}>
-                      <Typography variant="h3">{mins}:{secs}</Typography>
-                      <Button variant="contained" size="small" onClick={() => setRunning(!running)} sx={{ mt: 1 }}>
+                      <Typography variant="h3">
+                        {mins}:{secs}
+                      </Typography>
+                      <Button
+                        variant="contained"
+                        size="small"
+                        onClick={() => setRunning((r) => !r)}
+                        sx={{ mt: 1 }}
+                      >
                         {running ? "Pause" : "Start"}
                       </Button>
-                      <Button size="small" onClick={() => {
-                        setRunning(false);
-                        setFocusTime(FOCUS_DURATION);
-                        router.push("/study-session/log");
-                      }}>End</Button>
+                      <Button
+                        size="small"
+                        onClick={() => {
+                          setRunning(false);
+                          setFocusTime(FOCUS_DURATION);
+                          router.push("/study-session/log");
+                        }}
+                      >
+                        End
+                      </Button>
                     </CardContent>
                   </Card>
                 </Grid>
@@ -393,7 +419,9 @@ export default function CourseConnectDashboard() {
                     <CardHeader avatar={<BarChart />} title="Study Progress" />
                     <CardContent sx={{ textAlign: "center" }}>
                       <CircularProgress variant="determinate" value={65} size={60} />
-                      <Typography variant="caption" display="block" mt={1}>65% Goal</Typography>
+                      <Typography variant="caption" display="block" mt={1}>
+                        65% Goal
+                      </Typography>
                     </CardContent>
                   </Card>
                 </Grid>
@@ -403,7 +431,9 @@ export default function CourseConnectDashboard() {
                     <Divider />
                     <CardContent>
                       <TextField
-                        fullWidth multiline rows={3}
+                        fullWidth
+                        multiline
+                        rows={3}
                         placeholder="Jot something…"
                         value={note}
                         onChange={(e) => setNote(e.target.value)}

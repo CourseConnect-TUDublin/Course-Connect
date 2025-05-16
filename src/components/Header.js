@@ -2,21 +2,23 @@
 "use client";
 
 import React from "react";
+import Link from "next/link";
 import { AppBar, Toolbar, Typography, IconButton, Box, Button } from "@mui/material";
 import MenuIcon from "@mui/icons-material/Menu";
 import { usePathname } from "next/navigation";
-import { useSession } from "next-auth/react";
 import NotificationsBell from "./NotificationsBell";
+import Avatar from "@mui/material/Avatar";
+import { useSession, signOut } from "next-auth/react";
 
 export default function Header({ toggleSidebar, drawerWidth }) {
   const pathname = usePathname();
   const { data: session } = useSession();
+  const userName = session?.user?.name ?? session?.user?.email ?? "Guest";
 
-  // Define your navigation links if needed
   const navItems = [
     { label: "Home", route: "/home" },
     { label: "Dashboard", route: "/dashboard" },
-    // Add more as needed
+    // ...add other top-level links here
   ];
 
   return (
@@ -24,10 +26,10 @@ export default function Header({ toggleSidebar, drawerWidth }) {
       position="fixed"
       color="default"
       sx={{
-        width: `calc(100% - ${drawerWidth ? drawerWidth : 0}px)`,
+        width: `calc(100% - ${drawerWidth || 0}px)`,
         ml: drawerWidth ? `${drawerWidth}px` : 0,
-        backgroundColor: "#ffffff",
-        color: "#000000",
+        backgroundColor: "#fff",
+        color: "#000",
         borderBottom: "1px solid #eaeaea",
       }}
     >
@@ -35,7 +37,7 @@ export default function Header({ toggleSidebar, drawerWidth }) {
         <Box display="flex" alignItems="center">
           {drawerWidth && (
             <IconButton
-              onClick={() => toggleSidebar(true)}
+              onClick={() => toggleSidebar && toggleSidebar(true)}
               color="inherit"
               edge="start"
               sx={{ mr: 2, display: { xs: "block", md: "none" } }}
@@ -47,11 +49,12 @@ export default function Header({ toggleSidebar, drawerWidth }) {
             Course Connect
           </Typography>
         </Box>
-        <Box sx={{ display: "flex", alignItems: "center" }}>
-          {/* Navigation Links */}
+
+        <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
           {navItems.map((item) => (
             <Button
-              key={item.label}
+              key={item.route}
+              component={Link}
               href={item.route}
               sx={{
                 color: pathname === item.route ? "primary.main" : "inherit",
@@ -63,14 +66,24 @@ export default function Header({ toggleSidebar, drawerWidth }) {
             </Button>
           ))}
 
-          {/* Notifications Bell */}
-          {session?.user?.id && (
-            <NotificationsBell userId={session.user.id} />
-          )}
+          {/* Notifications bell */}
+          <NotificationsBell />
 
-          {/* Optionally: user profile/avatar button */}
+          {/* User avatar + name + sign out */}
+          <IconButton onClick={() => router.push("/profile")}>
+            <Avatar sx={{ width: 32, height: 32 }}>
+              {userName.charAt(0).toUpperCase()}
+            </Avatar>
+          </IconButton>
+          <Typography variant="body2" sx={{ mx: 1 }}>
+            {userName}
+          </Typography>
+          <Button color="inherit" onClick={() => signOut({ callbackUrl: "/login" })}>
+            Sign Out
+          </Button>
         </Box>
       </Toolbar>
     </AppBar>
   );
 }
+
