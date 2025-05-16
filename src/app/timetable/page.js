@@ -29,7 +29,26 @@ const pastelColors = [
 ];
 const days = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"];
 
-// Week navigation helpers
+// ---- 2-hour slots: 9am-11am ... 9pm-11pm ----
+const slotTimes = [
+  { start: 9, end: 11 },
+  { start: 11, end: 13 },
+  { start: 13, end: 15 },
+  { start: 15, end: 17 },
+  { start: 17, end: 19 },
+  { start: 19, end: 21 },
+  { start: 21, end: 23 }
+];
+
+function formatSlotLabel(startHour, endHour) {
+  const format = h => {
+    let hour = h % 12 || 12;
+    let ampm = h < 12 ? "am" : "pm";
+    return `${hour}${ampm}`;
+  };
+  return `${format(startHour)} – ${format(endHour)}`;
+}
+
 function getWeekRange(baseDate = new Date()) {
   const monday = new Date(baseDate);
   monday.setDate(monday.getDate() - monday.getDay() + 1);
@@ -117,15 +136,15 @@ export default function TimetableWeekView() {
     }
   };
 
-  // --- ADD LOGIC ---
+  // --- ADD LOGIC (ALWAYS 2-HOUR SLOT) ---
   const handleAddEvent = async () => {
     if (!form.course || !form.date || !form.time || !form.room || !form.group || !form.lecturer) {
       toast.error("Please fill all fields");
       return;
     }
     const [year, month, day] = form.date.split("-");
-    const [hours, minutes] = form.time.split(":");
-    const dt = new Date(year, month - 1, day, hours, minutes).toISOString();
+    const [startHour] = form.time.split(":");
+    const dt = new Date(year, month - 1, day, startHour, 0).toISOString();
 
     const payload = {
       programme: form.programme,
@@ -235,44 +254,51 @@ export default function TimetableWeekView() {
                   </Typography>
                 </Box>
               ) : (
-                groupedEvents[day].map((event) => (
-                  <Box
-                    key={event._id}
-                    sx={{
-                      mb: 2,
-                      p: 2,
-                      borderRadius: 2,
-                      bgcolor: getColorForEvent(event.course),
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "space-between",
-                      boxShadow: "0 2px 8px #0001",
-                    }}
-                  >
-                    <Box>
-                      <Typography
-                        variant="subtitle1"
-                        sx={{ fontWeight: 700, mb: 0.5 }}
-                      >
-                        {event.course}
-                      </Typography>
-                      <Typography sx={{ fontSize: 15 }}>
-                        {formatTime(event.fullDateTime)} | Room: {event.room} | Group: {event.group}
-                      </Typography>
-                      <Typography variant="caption" color="text.secondary">
-                        {event.lecturer}
-                      </Typography>
-                    </Box>
-                    <Button
-                      size="small"
-                      color="error"
-                      sx={{ minWidth: 32, fontWeight: 700, fontSize: 20 }}
-                      onClick={() => handleDeleteEvent(event._id)}
+                groupedEvents[day].map((event) => {
+                  const eventDate = new Date(event.fullDateTime);
+                  const slot = slotTimes.find(({ start }) => eventDate.getHours() === start);
+                  return (
+                    <Box
+                      key={event._id}
+                      sx={{
+                        mb: 2,
+                        p: 2,
+                        borderRadius: 2,
+                        bgcolor: getColorForEvent(event.course),
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "space-between",
+                        boxShadow: "0 2px 8px #0001",
+                      }}
                     >
-                      ×
-                    </Button>
-                  </Box>
-                ))
+                      <Box>
+                        <Typography
+                          variant="subtitle1"
+                          sx={{ fontWeight: 700, mb: 0.5 }}
+                        >
+                          {event.course}
+                        </Typography>
+                        <Typography sx={{ fontSize: 15 }}>
+                          {slot
+                            ? formatSlotLabel(slot.start, slot.end)
+                            : formatTime(event.fullDateTime) + " – 2hr"}
+                          {" | "}Room: {event.room} | Group: {event.group}
+                        </Typography>
+                        <Typography variant="caption" color="text.secondary">
+                          {event.lecturer}
+                        </Typography>
+                      </Box>
+                      <Button
+                        size="small"
+                        color="error"
+                        sx={{ minWidth: 32, fontWeight: 700, fontSize: 20 }}
+                        onClick={() => handleDeleteEvent(event._id)}
+                      >
+                        ×
+                      </Button>
+                    </Box>
+                  );
+                })
               )}
             </Paper>
           </Grid>
@@ -293,7 +319,7 @@ export default function TimetableWeekView() {
         </Fab>
       </Box>
 
-      {/* Add class modal */}
+      {/* Add class modal (time is dropdown, 2-hour slots only) */}
       <Dialog open={showAdd} onClose={() => setShowAdd(false)}>
         <DialogTitle>Add Class</DialogTitle>
         <DialogContent sx={{ minWidth: 340 }}>
@@ -347,14 +373,23 @@ export default function TimetableWeekView() {
             onChange={e => setForm(f => ({ ...f, date: e.target.value }))}
           />
           <TextField
-            label="Time"
-            type="time"
+            label="Time Slot"
+            select
             fullWidth
             sx={{ my: 1 }}
-            InputLabelProps={{ shrink: true }}
             value={form.time}
             onChange={e => setForm(f => ({ ...f, time: e.target.value }))}
-          />
+            InputLabelProps={{ shrink: true }}
+          >
+            {slotTimes.map(({ start, end }) => (
+              <MenuItem
+                key={start}
+                value={String(start).padStart(2, "0") + ":00"}
+              >
+                {formatSlotLabel(start, end)}
+              </MenuItem>
+            ))}
+          </TextField>
           <FormControlLabel
             control={
               <Checkbox
