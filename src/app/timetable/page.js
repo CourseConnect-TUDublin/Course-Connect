@@ -4,136 +4,138 @@ import React, { useEffect, useState, useCallback } from "react";
 import {
   Container,
   Typography,
-  FormControl,
-  InputLabel,
-  Select,
-  MenuItem,
   Grid,
-  AppBar,
-  Toolbar,
-  Button,
-  TextField,
   Box,
   Paper,
+  Button,
+  Fab,
+  TextField,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  MenuItem,
   Checkbox,
   FormControlLabel,
+  Stack,
 } from "@mui/material";
-import Link from "next/link";
-import { useRouter } from "next/navigation";
-import { useSession, signIn } from "next-auth/react";
-import { DatePicker, TimePicker } from "@mui/x-date-pickers";
-import { AdapterDateFns } from "@mui/x-date-pickers/AdapterDateFns";
-import { LocalizationProvider } from "@mui/x-date-pickers/LocalizationProvider";
-import CalendarWidget from "../../components/CalendarWidget";
+import { CalendarMonth, Add as AddIcon } from "@mui/icons-material";
+import { useSession } from "next-auth/react";
 import { toast } from "react-toastify";
-import { motion } from "framer-motion";
 
-// Simple Navbar
-function Navbar() {
+// Pastel colors for cards
+const pastelColors = [
+  "#ffe4ec", "#e6f0ff", "#e6ffe6", "#f5e6ff", "#fffbe6",
+];
+const days = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"];
+
+// Week navigation helpers
+function getWeekRange(baseDate = new Date()) {
+  const monday = new Date(baseDate);
+  monday.setDate(monday.getDate() - monday.getDay() + 1);
+  monday.setHours(0,0,0,0);
+
+  const sunday = new Date(monday);
+  sunday.setDate(monday.getDate() + 6);
+  sunday.setHours(23,59,59,999);
+
+  return { monday, sunday };
+}
+function addWeeks(date, num) {
+  const d = new Date(date);
+  d.setDate(d.getDate() + num * 7);
+  return d;
+}
+function formatWeek(monday, sunday) {
   return (
-    <AppBar position="static" color="default" elevation={1} sx={{ mb: 3 }}>
-      <Toolbar>
-        <Typography sx={{ flexGrow: 1 }}>TU Dublin – Timetable</Typography>
-        <Link href="/dashboard" passHref legacyBehavior>
-          <Button>Home</Button>
-        </Link>
-      </Toolbar>
-    </AppBar>
+    monday.toLocaleDateString("en-IE", { month: "short", day: "numeric" }) +
+    " – " +
+    sunday.toLocaleDateString("en-IE", { month: "short", day: "numeric", year: "numeric" })
   );
 }
+function getColorForEvent(course) {
+  if (!course) return pastelColors[0];
+  let idx = [...course].reduce((acc, c) => acc + c.charCodeAt(0), 0) % pastelColors.length;
+  return pastelColors[idx];
+}
+function formatTime(isoString) {
+  const d = new Date(isoString);
+  return d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+}
 
-export default function TimetablePage() {
+export default function TimetableWeekView() {
   const { data: session, status } = useSession();
-  const router = useRouter();
-
   const [timetable, setTimetable] = useState([]);
-  const [programmeData, setProgrammeData] = useState([]);
-  const [selectedProgramme, setSelectedProgramme] = useState("");
   const [refreshKey, setRefreshKey] = useState(0);
 
-  const [newEvent, setNewEvent] = useState({
-    programme: "",
+  // Week selection state
+  const [currentWeekMonday, setCurrentWeekMonday] = useState(() => {
+    const { monday } = getWeekRange();
+    return monday;
+  });
+
+  // Add class modal
+  const [showAdd, setShowAdd] = useState(false);
+  const programmeList = [
+    "BSc Computing",
+    "BA Business",
+    "BEng Engineering",
+    "BSc Science",
+  ];
+  const [form, setForm] = useState({
+    programme: programmeList[0],
     course: "",
-    lecturer: "",
-    date: null,
-    time: null,
-    group: "",
     room: "",
+    group: "",
+    lecturer: "",
+    date: "",
+    time: "",
     recurring: false,
   });
 
-  // Redirect to login if unauthenticated
-  useEffect(() => {
-    if (status === "loading") return;
-    if (!session) signIn();
-  }, [session, status]);
-
-  // Load programme list
-  useEffect(() => {
-    if (!session) return;
-    fetch("/api/programmeData")
-      .then(r => r.json())
-      .then(data => {
-        if (data.success) {
-          setProgrammeData(data.data);
-          if (data.data.length) {
-            const prog = data.data[0];
-            setSelectedProgramme(prog.name);
-            setNewEvent(ev => ({
-              ...ev,
-              programme: prog.name,
-              course: prog.courses[0] || "",
-            }));
-          }
-        }
-      });
-  }, [session]);
-
-  // Fetch timetable for current user
+  // --- FETCH LOGIC ---
   const fetchTimetable = useCallback(async () => {
     if (!session) return;
-    const userId = session.user.id;
-    const res = await fetch(`/api/timetable?userId=${userId}`);
+    const res = await fetch("/api/timetable");
     const data = await res.json();
     if (data.success) setTimetable(data.data || []);
     else toast.error("Failed to load timetable");
   }, [session]);
-
   useEffect(() => {
     if (session) fetchTimetable();
-  }, [session, fetchTimetable, selectedProgramme, refreshKey]);
+  }, [session, fetchTimetable, refreshKey]);
 
-  // Filter by programme
-  const filtered = timetable.filter(e => e.programme === selectedProgramme);
-
-  // Handle form changes
-  const onChange = e =>
-    setNewEvent(ev => ({ ...ev, [e.target.name]: e.target.value }));
-  const onDate = d => setNewEvent(ev => ({ ...ev, date: d }));
-  const onTime = t => setNewEvent(ev => ({ ...ev, time: t }));
-  const onRecurring = e =>
-    setNewEvent(ev => ({ ...ev, recurring: e.target.checked }));
-
-  // Submit new class
-  const submit = async () => {
-    const { course, lecturer, room, group, date, time } = newEvent;
-    if (!course || !lecturer || !room || !group || !date || !time) {
-      return toast.error("Please fill all fields");
+  // --- DELETE LOGIC ---
+  const handleDeleteEvent = async (eventId) => {
+    const res = await fetch(`/api/timetable/${eventId}`, { method: "DELETE" });
+    const data = await res.json();
+    if (data.success) {
+      toast.success("Class removed");
+      setRefreshKey((k) => k + 1);
+    } else {
+      toast.error("Failed to remove class");
     }
-    const dt = new Date(
-      date.getFullYear(),
-      date.getMonth(),
-      date.getDate(),
-      time.getHours(),
-      time.getMinutes()
-    ).toISOString();
+  };
+
+  // --- ADD LOGIC ---
+  const handleAddEvent = async () => {
+    if (!form.course || !form.date || !form.time || !form.room || !form.group || !form.lecturer) {
+      toast.error("Please fill all fields");
+      return;
+    }
+    const [year, month, day] = form.date.split("-");
+    const [hours, minutes] = form.time.split(":");
+    const dt = new Date(year, month - 1, day, hours, minutes).toISOString();
 
     const payload = {
-      ...newEvent,
+      programme: form.programme,
+      course: form.course,
+      lecturer: form.lecturer,
+      room: form.room,
+      group: form.group,
       fullDateTime: dt,
-      userId: session.user.id,
+      recurring: form.recurring,
     };
-
     const res = await fetch("/api/timetable", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -142,156 +144,233 @@ export default function TimetablePage() {
     const data = await res.json();
     if (data.success) {
       toast.success("Class added");
-      fetchTimetable();
-      setNewEvent(ev => ({
-        ...ev,
-        lecturer: "",
-        date: null,
-        time: null,
-        group: "",
+      setShowAdd(false);
+      setForm({
+        programme: programmeList[0],
+        course: "",
         room: "",
+        group: "",
+        lecturer: "",
+        date: "",
+        time: "",
         recurring: false,
-      }));
-      setRefreshKey(k => k + 1);
+      });
+      setRefreshKey((k) => k + 1);
     } else {
-      toast.error("Failed to add: " + data.error);
+      toast.error("Failed to add class");
     }
   };
+
+  // --- Filter and group events for selected week only ---
+  function groupEventsByDay(events) {
+    const { monday, sunday } = getWeekRange(currentWeekMonday);
+    const map = {};
+    days.forEach((day) => { map[day] = []; });
+    events.forEach((e) => {
+      const eventDate = new Date(e.fullDateTime);
+      if (eventDate < monday || eventDate > sunday) return; // only events in this week
+      const weekday = eventDate.toLocaleString("en-IE", { weekday: "long" });
+      if (map[weekday]) map[weekday].push(e);
+    });
+    for (const day of days) {
+      map[day].sort((a, b) => new Date(a.fullDateTime) - new Date(b.fullDateTime));
+    }
+    return map;
+  }
+  const { monday, sunday } = getWeekRange(currentWeekMonday);
+  const groupedEvents = groupEventsByDay(timetable);
 
   if (status === "loading" || !session) {
     return <Typography>Loading…</Typography>;
   }
 
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.4 }}
-    >
-      <Container maxWidth="xl">
-        <Navbar />
-        <Grid container spacing={4}>
-          {/* Left: Form */}
-          <Grid item xs={12} md={4}>
-            <Paper sx={{ p: 3 }}>
-              <Typography variant="h6">Select Programme</Typography>
-              <FormControl fullWidth sx={{ my: 2 }}>
-                <InputLabel>Programme</InputLabel>
-                <Select
-                  value={selectedProgramme}
-                  onChange={e => {
-                    setSelectedProgramme(e.target.value);
-                    const p = programmeData.find(x => x.name === e.target.value);
-                    setNewEvent(ev => ({
-                      ...ev,
-                      programme: e.target.value,
-                      course: p?.courses?.[0] || "",
-                    }));
+    <Container maxWidth="xl" sx={{ pb: 8 }}>
+      <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ mb: 2 }}>
+        <Typography variant="h5" sx={{ fontWeight: 600 }}>
+          Weekly Schedule
+        </Typography>
+        <Stack direction="row" spacing={1}>
+          <Button onClick={() => setCurrentWeekMonday(addWeeks(currentWeekMonday, -1))}>
+            Previous Week
+          </Button>
+          <Button onClick={() => setCurrentWeekMonday(addWeeks(currentWeekMonday, 1))}>
+            Next Week
+          </Button>
+        </Stack>
+      </Stack>
+      <Typography variant="body2" sx={{ mb: 3, color: "#666" }}>
+        {formatWeek(monday, sunday)}
+      </Typography>
+      <Grid container spacing={2}>
+        {days.map((day) => (
+          <Grid item xs={12} key={day}>
+            <Typography variant="subtitle1" sx={{ mb: 1, fontWeight: 500 }}>
+              {day}
+            </Typography>
+            <Paper
+              variant="outlined"
+              sx={{
+                minHeight: 100,
+                bgcolor: "#fcfcfc",
+                p: 2,
+                borderRadius: 2,
+                boxShadow: "none",
+                mb: 1,
+              }}
+            >
+              {groupedEvents[day].length === 0 ? (
+                <Box
+                  sx={{
+                    textAlign: "center",
+                    color: "#aaa",
+                    py: 5,
+                    opacity: 0.8,
                   }}
-                  label="Programme"
                 >
-                  {programmeData.map(p => (
-                    <MenuItem key={p.name} value={p.name}>
-                      {p.name}
-                    </MenuItem>
-                  ))}
-                </Select>
-              </FormControl>
-
-              <Typography variant="h6">Add Class</Typography>
-              <FormControl fullWidth sx={{ my: 1 }}>
-                <InputLabel>Course</InputLabel>
-                <Select
-                  name="course"
-                  value={newEvent.course}
-                  onChange={onChange}
-                  label="Course"
-                >
-                  {(programmeData.find(p => p.name === selectedProgramme)
-                    ?.courses || []
-                  ).map(c => (
-                    <MenuItem key={c} value={c}>
-                      {c}
-                    </MenuItem>
-                  ))}
-                </Select>
-              </FormControl>
-              <TextField
-                label="Lecturer"
-                name="lecturer"
-                fullWidth
-                sx={{ my: 1 }}
-                value={newEvent.lecturer}
-                onChange={onChange}
-              />
-              <TextField
-                label="Room"
-                name="room"
-                fullWidth
-                sx={{ my: 1 }}
-                value={newEvent.room}
-                onChange={onChange}
-              />
-              <TextField
-                label="Group"
-                name="group"
-                fullWidth
-                sx={{ my: 1 }}
-                value={newEvent.group}
-                onChange={onChange}
-              />
-              <LocalizationProvider dateAdapter={AdapterDateFns}>
-                <DatePicker
-                  label="Date"
-                  value={newEvent.date}
-                  onChange={onDate}
-                  renderInput={params => (
-                    <TextField {...params} fullWidth sx={{ my: 1 }} />
-                  )}
-                />
-                <TimePicker
-                  label="Time"
-                  value={newEvent.time}
-                  onChange={onTime}
-                  renderInput={params => (
-                    <TextField {...params} fullWidth sx={{ my: 1 }} />
-                  )}
-                />
-              </LocalizationProvider>
-              <FormControlLabel
-                control={
-                  <Checkbox
-                    checked={newEvent.recurring}
-                    onChange={onRecurring}
-                  />
-                }
-                label="Recurring Weekly"
-              />
-              <Box sx={{ mt: 2, display: "flex", gap: 1 }}>
-                <Button variant="outlined" onClick={() => setTimetable([])}>
-                  Clear
-                </Button>
-                <Button variant="contained" onClick={submit}>
-                  Add Class
-                </Button>
-              </Box>
+                  <CalendarMonth sx={{ fontSize: 40, mb: 1 }} />
+                  <Typography>No classes scheduled</Typography>
+                  <Typography variant="caption">
+                    Add a class to get started
+                  </Typography>
+                </Box>
+              ) : (
+                groupedEvents[day].map((event) => (
+                  <Box
+                    key={event._id}
+                    sx={{
+                      mb: 2,
+                      p: 2,
+                      borderRadius: 2,
+                      bgcolor: getColorForEvent(event.course),
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "space-between",
+                      boxShadow: "0 2px 8px #0001",
+                    }}
+                  >
+                    <Box>
+                      <Typography
+                        variant="subtitle1"
+                        sx={{ fontWeight: 700, mb: 0.5 }}
+                      >
+                        {event.course}
+                      </Typography>
+                      <Typography sx={{ fontSize: 15 }}>
+                        {formatTime(event.fullDateTime)} | Room: {event.room} | Group: {event.group}
+                      </Typography>
+                      <Typography variant="caption" color="text.secondary">
+                        {event.lecturer}
+                      </Typography>
+                    </Box>
+                    <Button
+                      size="small"
+                      color="error"
+                      sx={{ minWidth: 32, fontWeight: 700, fontSize: 20 }}
+                      onClick={() => handleDeleteEvent(event._id)}
+                    >
+                      ×
+                    </Button>
+                  </Box>
+                ))
+              )}
             </Paper>
           </Grid>
+        ))}
+      </Grid>
 
-          {/* Right: Calendar */}
-          <Grid item xs={12} md={8}>
-            <Paper sx={{ p: 2 }}>
-              <Typography variant="h5" align="center" gutterBottom>
-                Weekly Timetable
-              </Typography>
-              <CalendarWidget
-                events={filtered}
-                refresh={refreshKey}
+      {/* Floating action button (add class) */}
+      <Box
+        sx={{
+          position: "fixed",
+          right: 32,
+          bottom: 32,
+          zIndex: 120,
+        }}
+      >
+        <Fab color="primary" aria-label="add" onClick={() => setShowAdd(true)}>
+          <AddIcon />
+        </Fab>
+      </Box>
+
+      {/* Add class modal */}
+      <Dialog open={showAdd} onClose={() => setShowAdd(false)}>
+        <DialogTitle>Add Class</DialogTitle>
+        <DialogContent sx={{ minWidth: 340 }}>
+          <TextField
+            label="Programme"
+            select
+            fullWidth
+            sx={{ my: 1 }}
+            value={form.programme}
+            onChange={e => setForm(f => ({ ...f, programme: e.target.value }))}
+          >
+            {programmeList.map((prog) => (
+              <MenuItem key={prog} value={prog}>{prog}</MenuItem>
+            ))}
+          </TextField>
+          <TextField
+            label="Course"
+            fullWidth
+            sx={{ my: 1 }}
+            value={form.course}
+            onChange={e => setForm(f => ({ ...f, course: e.target.value }))}
+          />
+          <TextField
+            label="Room"
+            fullWidth
+            sx={{ my: 1 }}
+            value={form.room}
+            onChange={e => setForm(f => ({ ...f, room: e.target.value }))}
+          />
+          <TextField
+            label="Group"
+            fullWidth
+            sx={{ my: 1 }}
+            value={form.group}
+            onChange={e => setForm(f => ({ ...f, group: e.target.value }))}
+          />
+          <TextField
+            label="Lecturer"
+            fullWidth
+            sx={{ my: 1 }}
+            value={form.lecturer}
+            onChange={e => setForm(f => ({ ...f, lecturer: e.target.value }))}
+          />
+          <TextField
+            label="Date"
+            type="date"
+            fullWidth
+            sx={{ my: 1 }}
+            InputLabelProps={{ shrink: true }}
+            value={form.date}
+            onChange={e => setForm(f => ({ ...f, date: e.target.value }))}
+          />
+          <TextField
+            label="Time"
+            type="time"
+            fullWidth
+            sx={{ my: 1 }}
+            InputLabelProps={{ shrink: true }}
+            value={form.time}
+            onChange={e => setForm(f => ({ ...f, time: e.target.value }))}
+          />
+          <FormControlLabel
+            control={
+              <Checkbox
+                checked={form.recurring}
+                onChange={e => setForm(f => ({ ...f, recurring: e.target.checked }))}
               />
-            </Paper>
-          </Grid>
-        </Grid>
-      </Container>
-    </motion.div>
+            }
+            label="Recurring Weekly"
+            sx={{ my: 1 }}
+          />
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setShowAdd(false)} color="inherit">Cancel</Button>
+          <Button onClick={handleAddEvent} variant="contained">Add</Button>
+        </DialogActions>
+      </Dialog>
+    </Container>
   );
 }
