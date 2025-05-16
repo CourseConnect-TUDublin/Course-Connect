@@ -1,9 +1,14 @@
-// src/components/Sidebar.js
 "use client";
-
 import React, { useState } from "react";
-import Link from "next/link";
-import { List, ListItem, Button, Popover, Typography, Box } from "@mui/material";
+import { useRouter } from "next/navigation";
+import {
+  List,
+  ListItem,
+  ListItemButton,
+  ListItemIcon,
+  ListItemText,
+  Collapse,
+} from "@mui/material";
 import {
   Home,
   Dashboard as DashboardIcon,
@@ -14,6 +19,8 @@ import {
   Help,
   Settings,
   Archive as ArchiveIcon,
+  ExpandLess,
+  ExpandMore,
 } from "@mui/icons-material";
 
 const sidebarItems = [
@@ -26,7 +33,6 @@ const sidebarItems = [
   { label: "Study Hub", route: "/studyhub", icon: <People /> },
   {
     label: "Study Tools",
-    route: "/studyhub",
     icon: <People />,
     subItems: [
       { label: "Study Buddy", route: "/StudyBuddy" },
@@ -40,87 +46,70 @@ const sidebarItems = [
 ];
 
 export default function Sidebar() {
-  const [anchorEl, setAnchorEl] = useState(null);
-  const [activeItem, setActiveItem] = useState(null);
+  const [openMenu, setOpenMenu] = useState(null);
+  const router = useRouter();
 
-  const handleMouseEnter = (event, item) => {
-    if (item.subItems) {
-      setAnchorEl(event.currentTarget);
-      setActiveItem(item);
-    }
+  const handleToggle = (label) => {
+    setOpenMenu(openMenu === label ? null : label);
   };
-
-  const handleMouseLeave = () => {
-    setAnchorEl(null);
-    setActiveItem(null);
-  };
-
-  const open = Boolean(anchorEl);
 
   return (
     <List>
       {sidebarItems.map((item) => (
-        <ListItem
-          key={item.label}
-          disablePadding
-          onMouseEnter={(e) => handleMouseEnter(e, item)}
-          onMouseLeave={handleMouseLeave}
-        >
-          <Button
-            component={Link}
-            href={item.route}
-            startIcon={item.icon}
-            fullWidth
-            sx={{
-              justifyContent: "flex-start",
-              textTransform: "none",
-              color: "inherit",
-              padding: "12px 16px",
-              transition: "background-color 0.3s ease",
-              "&:hover": { backgroundColor: "#f0f0f0" },
-            }}
-          >
-            {item.label}
-          </Button>
-          {item.subItems && activeItem?.label === item.label && (
-            <Popover
-              open={open}
-              anchorEl={anchorEl}
-              onClose={handleMouseLeave}
-              anchorOrigin={{
-                vertical: "top",
-                horizontal: "right",
-              }}
-              transformOrigin={{
-                vertical: "top",
-                horizontal: "left",
-              }}
-              PaperProps={{
-                onMouseEnter: () => setAnchorEl(anchorEl),
-                onMouseLeave: handleMouseLeave,
-                sx: { mt: 1 },
-              }}
-            >
-              <Box>
-                {item.subItems.map((subItem) => (
-                  <Button
-                    key={subItem.label}
-                    component={Link}
-                    href={subItem.route}
-                    fullWidth
-                    sx={{
-                      justifyContent: "flex-start",
-                      textTransform: "none",
-                      padding: "8px 16px",
-                    }}
-                  >
-                    {subItem.label}
-                  </Button>
-                ))}
-              </Box>
-            </Popover>
+        <React.Fragment key={item.label}>
+          <ListItem disablePadding>
+            {item.subItems ? (
+              <ListItemButton
+                onClick={() => handleToggle(item.label)}
+                sx={{
+                  justifyContent: "flex-start",
+                  textTransform: "none",
+                  color: "inherit",
+                  padding: "12px 16px",
+                  transition: "background-color 0.3s ease",
+                  "&:hover": { backgroundColor: "#f0f0f0" },
+                }}
+              >
+                <ListItemIcon>{item.icon}</ListItemIcon>
+                <ListItemText primary={item.label} />
+                {openMenu === item.label ? <ExpandLess /> : <ExpandMore />}
+              </ListItemButton>
+            ) : (
+              <ListItemButton
+                onClick={() => router.push(item.route)}
+                sx={{
+                  justifyContent: "flex-start",
+                  textTransform: "none",
+                  color: "inherit",
+                  padding: "12px 16px",
+                  transition: "background-color 0.3s ease",
+                  "&:hover": { backgroundColor: "#f0f0f0" },
+                }}
+              >
+                <ListItemIcon>{item.icon}</ListItemIcon>
+                <ListItemText primary={item.label} />
+              </ListItemButton>
+            )}
+          </ListItem>
+          {item.subItems && (
+            <Collapse in={openMenu === item.label} timeout="auto" unmountOnExit>
+              {item.subItems.map((subItem) => (
+                <ListItemButton
+                  key={subItem.label}
+                  sx={{
+                    pl: 5,
+                    textTransform: "none",
+                    color: "inherit",
+                    padding: "8px 16px",
+                  }}
+                  onClick={() => router.push(subItem.route)}
+                >
+                  <ListItemText primary={subItem.label} />
+                </ListItemButton>
+              ))}
+            </Collapse>
           )}
-        </ListItem>
+        </React.Fragment>
       ))}
     </List>
   );
