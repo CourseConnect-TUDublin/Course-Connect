@@ -1,4 +1,4 @@
-import { connectToDatabase } from '../../../lib/dbConnect.js';
+import { connectToDatabase } from '../../../../frontend/app/lib/dbConnect.js';
 import Timetable from '../../../models/Timetable.js';
 import { getToken } from "next-auth/jwt";
 

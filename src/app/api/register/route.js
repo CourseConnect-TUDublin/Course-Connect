@@ -1,6 +1,6 @@
 // src/app/api/register/route.js
 import { NextResponse } from 'next/server';
-import dbConnect from '../../../lib/dbConnect.js';
+import dbConnect from '../../../../frontend/app/lib/dbConnect.js';
 import User from '../../../models/User.js';
 import bcrypt from 'bcrypt';
 

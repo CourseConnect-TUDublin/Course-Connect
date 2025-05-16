@@ -1,6 +1,6 @@
 // src/app/api/studybuddies/route.js
 
-import dbConnect from '../../../utils/dbConnect';
+import dbConnect from '../../../../frontend/app/utils/dbConnect';
 import User from '../../../models/User';
 import { NextResponse } from 'next/server';
 

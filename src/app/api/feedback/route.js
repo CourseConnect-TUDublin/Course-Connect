@@ -1,5 +1,5 @@
 // /src/app/api/feedback/route.js
-import dbConnect from '../../../utils/dbConnect';
+import dbConnect from '../../../../frontend/app/utils/dbConnect';
 import Feedback from '../../../models/Feedback';
 
 export async function POST(request) {

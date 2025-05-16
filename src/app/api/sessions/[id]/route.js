@@ -1,5 +1,5 @@
 // src/app/api/sessions/[id]/route.js
-import dbConnect from "../../../../utils/dbConnect";
+import dbConnect from "../../../../../frontend/app/utils/dbConnect";
 import Session from "../../../../models/Session";
 import Notification from "../../../../models/Notification";
 import { NextResponse } from "next/server";

@@ -1,6 +1,6 @@
 // src/app/api/programmeData/route.js
 
-import { connectToDatabase } from "../../../lib/dbConnect";
+import { connectToDatabase } from "../../../../frontend/app/lib/dbConnect";
 import Programme from "../../../models/Programme";
 
 export async function GET(request) {

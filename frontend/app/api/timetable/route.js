@@ -1,56 +1,114 @@
+import { connectToDatabase } from '../../../lib/dbConnect.js';
+import Timetable from '../../../models/Timetable.js';
+import { getToken } from "next-auth/jwt";
 
-import { NextResponse } from "next/server";
+const secret = process.env.NEXTAUTH_SECRET;
 
-// In-memory database to store timetable entries
-let timetableData = [];
-
-// GET: Retrieve all timetable entries
-export async function GET() {
-  // (For now, simply return the stored events.
-  // You could later generate recurring event occurrences here.)
-  return NextResponse.json({ data: timetableData });
-}
-
-// POST: Add a new timetable entry
-export async function POST(req) {
+export async function GET(req) {
   try {
-    const newEntry = await req.json();
-
-    // Validate that all required fields are provided
-    if (
-      !newEntry.course ||
-      !newEntry.lecturer ||
-      !newEntry.room ||
-      !newEntry.date ||
-      !newEntry.time
-    ) {
-      return NextResponse.json({ error: "All fields are required!" }, { status: 400 });
+    await connectToDatabase();
+    const token = await getToken({ req, secret });
+    console.log("Token in GET:", token);
+    if (!token) {
+      return new Response(
+        JSON.stringify({ success: false, error: "Unauthorized - No token found" }),
+        { status: 401, headers: { "Content-Type": "application/json" } }
+      );
+    }
+    
+    const userId = token.id || token.sub;
+    if (!userId) {
+      return new Response(
+        JSON.stringify({ success: false, error: "Token missing user id" }),
+        { status: 400, headers: { "Content-Type": "application/json" } }
+      );
     }
 
-    // Determine if the event is recurring; default to false if not provided
-    const recurring = newEntry.recurring === true;
-
-    // Create an entry with a unique ID
-    const entryWithId = {
-      id: timetableData.length + 1,
-      course: newEntry.course,
-      lecturer: newEntry.lecturer,
-      room: newEntry.room,
-      date: newEntry.date, // Expected format: "DD/MM/YYYY"
-      time: newEntry.time, // Expected format: "HH:mm AM/PM"
-      recurring,
-    };
-
-    timetableData.push(entryWithId);
-
-    return NextResponse.json(
-      { message: "Timetable entry added successfully!", data: entryWithId },
-      { status: 201 }
+    const entries = await Timetable.find({ userId });
+    return new Response(
+      JSON.stringify({ success: true, data: entries }),
+      { status: 200, headers: { "Content-Type": "application/json" } }
     );
   } catch (error) {
-    return NextResponse.json(
-      { error: "Invalid JSON format", details: error.message },
-      { status: 400 }
+    console.error("Error fetching timetable:", error);
+    return new Response(
+      JSON.stringify({ success: false, error: "Failed to fetch timetable entries" }),
+      { status: 500, headers: { "Content-Type": "application/json" } }
+    );
+  }
+}
+
+export async function POST(req) {
+  try {
+    await connectToDatabase();
+    const token = await getToken({ req, secret });
+    if (!token) {
+      return new Response(
+        JSON.stringify({ success: false, error: "Unauthorized - No token found" }),
+        { status: 401, headers: { "Content-Type": "application/json" } }
+      );
+    }
+    const body = await req.json();
+    console.log("Received Data from Frontend:", body);
+    
+    const userId = token.id || token.sub;
+    if (!userId) {
+      return new Response(
+        JSON.stringify({ success: false, error: "Missing userId in token" }),
+        { status: 400, headers: { "Content-Type": "application/json" } }
+      );
+    }
+
+    // Create the initial entry
+    const newEntry = new Timetable({
+      programme: body.programme,
+      course: body.course,
+      lecturer: body.lecturer,
+      room: body.room,
+      fullDateTime: new Date(body.fullDateTime),
+      group: body.group,
+      userId: userId,
+      recurring: body.recurring || false,
+    });
+    await newEntry.save();
+
+    // If recurring is enabled, create additional entries (e.g., for 4 more weeks)
+    let recurringEntries = [];
+    if (body.recurring) {
+      for (let i = 1; i <= 4; i++) {
+        const recurringDate = new Date(newEntry.fullDateTime);
+        recurringDate.setDate(recurringDate.getDate() + 7 * i);
+        const recurringEntry = new Timetable({
+          programme: body.programme,
+          course: body.course,
+          lecturer: body.lecturer,
+          room: body.room,
+          fullDateTime: recurringDate,
+          group: body.group,
+          userId: userId,
+          recurring: true,
+        });
+        await recurringEntry.save();
+        recurringEntries.push(recurringEntry);
+      }
+    }
+
+    return new Response(
+      JSON.stringify({
+        success: true,
+        message: body.recurring
+          ? "Schedule and recurring events added successfully"
+          : "Schedule added successfully",
+        entry: newEntry,
+        recurringEntries,
+      }),
+      { status: 201, headers: { "Content-Type": "application/json" } }
+    );
+  } catch (error) {
+    console.error("API Error:", error);
+    return new Response(
+      JSON.stringify({ success: false, error: "Internal Server Error" }),
+      { status: 500, headers: { "Content-Type": "application/json" } }
     );
   }
 }

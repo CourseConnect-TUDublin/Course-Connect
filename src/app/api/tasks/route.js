@@ -1,4 +1,4 @@
-import { connectToDatabase } from '../../../lib/dbConnect.js';
+import { connectToDatabase } from '../../../../frontend/app/lib/dbConnect.js';
 import Task from '../../../models/Task.js';
 import mongoose from 'mongoose';
 

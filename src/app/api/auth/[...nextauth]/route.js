@@ -2,7 +2,7 @@
 
 import NextAuth from "next-auth";
 import CredentialsProvider from "next-auth/providers/credentials";
-import dbConnect from "../../../../utils/dbConnect";
+import dbConnect from "../../../../../frontend/app/utils/dbConnect";
 import User from "../../../../models/User";
 import bcrypt from "bcrypt";
 

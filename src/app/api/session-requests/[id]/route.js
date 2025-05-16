@@ -1,4 +1,4 @@
-import dbConnect from '../../../../utils/dbConnect';
+import dbConnect from '../../../../../frontend/app/utils/dbConnect';
 import SessionRequest from '../../../../models/SessionRequest';
 import Session        from '../../../../models/Session';
 import { NextResponse } from 'next/server';

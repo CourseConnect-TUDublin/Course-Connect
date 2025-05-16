@@ -1,5 +1,5 @@
 // /src/app/api/tasks/[id]/route.js
-import dbConnect from '../../../../lib/dbConnect';
+import dbConnect from '../../../../../frontend/app/lib/dbConnect';
 import Task from '../../../../models/Task';
 
 function cleanId(id) {
