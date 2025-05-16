@@ -42,12 +42,9 @@ export default function StudyBuddyList() {
       setError(null);
       try {
         const url = `/api/studybuddies${q ? `?search=${encodeURIComponent(q)}` : ""}`;
-        console.log("Fetching", url);
         const res = await fetch(url);
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
         let data = await res.json();
-        console.log("Data", data);
-        // Exclude current user
         if (currentId) data = data.filter(b => b._id !== currentId);
         setBuddies(data);
       } catch (e) {
@@ -118,10 +115,14 @@ export default function StudyBuddyList() {
               busy:    "warning"
             }[stat] || "default";
 
+            // deterministic DM room id
+            const roomId = [currentId, _id].sort().join("_");
+
             return (
               <ListItem
                 key={_id}
                 divider
+                disablePadding
                 secondaryAction={
                   <Button
                     size="small"
@@ -133,9 +134,12 @@ export default function StudyBuddyList() {
                     Request
                   </Button>
                 }
-                disablePadding
               >
-                <ListItemButton component={Link} href={`/StudyBuddy/${_id}`}>
+                {/* Link to DM room */}
+                <ListItemButton
+                  component={Link}
+                  href={`/dm/${roomId}`}
+                >
                   <ListItemAvatar>
                     <Badge
                       overlap="circular"
@@ -165,7 +169,6 @@ export default function StudyBuddyList() {
         onClose={(didCreate) => {
           setFormOpen(false);
           setRequestBuddyId(null);
-          // optionally refetch or notify on didCreate
         }}
       />
     </Box>
