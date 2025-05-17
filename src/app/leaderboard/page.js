@@ -1,47 +1,47 @@
 "use client";
 import React, { useEffect, useState } from "react";
-import { Card, CardContent, Typography, List, ListItem, ListItemText, Avatar, Box, CircularProgress } from "@mui/material";
+import { Container, Card, Typography, List, ListItem, ListItemAvatar, Avatar, ListItemText } from "@mui/material";
 import EmojiEventsIcon from "@mui/icons-material/EmojiEvents";
 
 export default function LeaderboardPage() {
   const [leaders, setLeaders] = useState([]);
-  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    fetch("/api/rewards") // Endpoint should return leaderboard data
+    fetch("/api/rewards")
       .then((res) => res.json())
-      .then((data) => {
-        setLeaders(data.leaderboard || []);
-        setLoading(false);
-      });
+      .then((data) => setLeaders(data.leaderboard || []));
   }, []);
 
-  if (loading) return <CircularProgress />;
-
   return (
-    <Box sx={{ maxWidth: 500, mx: "auto", mt: 4 }}>
-      <Card elevation={4}>
-        <CardContent>
-          <Typography variant="h5" gutterBottom>
-            <EmojiEventsIcon sx={{ mr: 1, verticalAlign: "middle" }} />
-            Leaderboard
-          </Typography>
-          <List>
-            {leaders.map((user, idx) => (
-              <ListItem key={user._id || idx}>
-                <Avatar src={user.avatar || ""} sx={{ mr: 2 }}>
-                  {user.name?.[0] || "?"}
+    <Container maxWidth="sm" sx={{ mt: 4 }}>
+      <Card sx={{ p: 3, mb: 4 }}>
+        <Typography variant="h5" sx={{ mb: 2 }}>
+          🏆 Leaderboard
+        </Typography>
+        <List>
+          {leaders.map((user, i) => (
+            <ListItem key={user._id || i}>
+              <ListItemAvatar>
+                <Avatar src={user.avatar}>
+                  {i === 0 ? <EmojiEventsIcon color="warning" /> : (user.name?.[0] || "?")}
                 </Avatar>
-                <ListItemText
-                  primary={`${idx + 1}. ${user.name || "Unknown"}`}
-                  secondary={`Points: ${user.points} | Level: ${user.level}`}
-                />
-                {idx === 0 && <EmojiEventsIcon color="warning" />} {/* Gold icon for 1st */}
-              </ListItem>
-            ))}
-          </List>
-        </CardContent>
+              </ListItemAvatar>
+              <ListItemText
+                primary={
+                  <span>
+                    <b>{user.name}</b> {i === 0 && <span>🥇</span>}
+                  </span>
+                }
+                secondary={
+                  <>
+                    Points: <b>{user.points}</b> | Level: {user.level}
+                  </>
+                }
+              />
+            </ListItem>
+          ))}
+        </List>
       </Card>
-    </Box>
+    </Container>
   );
 }

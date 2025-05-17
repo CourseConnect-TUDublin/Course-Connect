@@ -25,7 +25,7 @@ export default function TaskColumn({ status, tasks, onDelete, onEdit, onArchive 
           ? "Amber - In Progress"
           : "Green - Completed"}
       </Typography>
-      <Droppable droppableId={status}>
+      <Droppable droppableId={status} isDropDisabled={false}>
         {(provided, snapshot) => (
           <Box
             ref={provided.innerRef}

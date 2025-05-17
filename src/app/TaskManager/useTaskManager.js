@@ -147,6 +147,40 @@ export default function useTaskManager(userId) {
     }
   };
 
+  // Award reward to user for completing a task (with badge and level up feedback)
+  const awardRewardForTaskCompletion = async (userId, taskId) => {
+    try {
+      const res = await fetch("/api/rewards", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          userId,
+          type: "task_completed",
+          taskId,
+        }),
+      });
+      const data = await res.json();
+      if (data.success && data.user) {
+        toast.success("🎉 Congrats! You earned points for completing a task!");
+
+        // Level up feedback
+        if (data.user.levelUp) {
+          toast.success(`🚀 Level up! You reached level ${data.user.level}`);
+        }
+        // New badge feedback (assume your backend returns newly added badges as data.user.newBadge)
+        if (data.user.newBadge) {
+          toast.info(`🏅 New badge unlocked: ${data.user.newBadge}`);
+        }
+      } else if (data.success) {
+        toast.success("🎉 Congrats! You earned points for completing a task!");
+      } else {
+        toast.info("Task complete, but no reward granted.");
+      }
+    } catch (error) {
+      console.error("Error awarding reward:", error);
+    }
+  };
+
   // Filtering and sorting tasks
   const filterAndSortTasks = (tasksObj) => {
     const filtered = {};
@@ -181,7 +215,7 @@ export default function useTaskManager(userId) {
     }
   };
 
-  // Drag and drop handler
+  // Drag and drop handler (with reward integration)
   const onDragEnd = async (result) => {
     const { source, destination } = result;
     if (!destination) return;
@@ -213,6 +247,12 @@ export default function useTaskManager(userId) {
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(movedItem),
         });
+
+        // Award reward if moved to green (completed)
+        if (movedItem.status === "green") {
+          await awardRewardForTaskCompletion(movedItem.userId, movedItem._id);
+        }
+
         toast.success("Task moved successfully!");
       } catch (error) {
         console.error("Error updating task status:", error);

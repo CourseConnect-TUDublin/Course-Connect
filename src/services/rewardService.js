@@ -1,13 +1,13 @@
 // src/services/rewardService.js
 
-const User = require('../models/User');
+import User from "@/models/User";
 
 const REWARD_ACTIONS = {
-  COMPLETE_TASK: { points: 10, xp: 10 },
-  JOIN_SESSION: { points: 15, xp: 15 },
-  DAILY_LOGIN: { points: 5, xp: 5 },
-  HELP_PEER: { points: 20, xp: 15 },
-  FINISH_WEEK: { points: 50, xp: 50 }
+  task_completed: { points: 10, xp: 10 },
+  join_session: { points: 15, xp: 15 },
+  daily_login: { points: 5, xp: 5 },
+  help_peer: { points: 20, xp: 15 },
+  finish_week: { points: 50, xp: 50 }
 };
 
 const BADGES = {
@@ -17,12 +17,12 @@ const BADGES = {
   // Add more as needed
 };
 
-async function awardPoints(userId, action) {
+export async function awardPoints(userId, type, taskId = null) {
   const user = await User.findById(userId);
   if (!user) throw new Error('User not found');
 
-  const reward = REWARD_ACTIONS[action];
-  if (!reward) throw new Error('Unknown action');
+  const reward = REWARD_ACTIONS[type];
+  if (!reward) throw new Error('Unknown reward type');
 
   // Update streak (daily logic)
   const now = new Date();
@@ -34,8 +34,11 @@ async function awardPoints(userId, action) {
   }
   user.lastActivity = now;
 
-  user.points += reward.points;
-  user.xp += reward.xp;
+  // Add points/xp (if fields are missing, default to 0)
+  user.points = (user.points || 0) + reward.points;
+  user.xp = (user.xp || 0) + reward.xp;
+  user.level = user.level || 1;
+  user.badges = user.badges || [];
 
   // Level up logic
   const LEVEL_UP_XP = 100;
@@ -56,13 +59,11 @@ async function awardPoints(userId, action) {
   return user;
 }
 
-async function getLeaderboard(limit = 10) {
-  return await User.find().sort({ points: -1 }).limit(limit).select('name points level badges');
+export async function getLeaderboard(limit = 10) {
+  return await User.find()
+    .sort({ points: -1 })
+    .limit(limit)
+    .select('name points level badges');
 }
 
-module.exports = {
-  awardPoints,
-  getLeaderboard,
-  BADGES,
-  REWARD_ACTIONS,
-};
+export { BADGES, REWARD_ACTIONS };
