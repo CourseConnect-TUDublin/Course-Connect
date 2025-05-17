@@ -1,83 +1,78 @@
-"use client";
+// src/app/dashboard/FlashcardPreview.js
 import React, { useEffect, useState } from "react";
-import { Card, CardHeader, CardContent, Typography, Grid, Skeleton, Box, Button } from "@mui/material";
-import QuizIcon from "@mui/icons-material/Quiz";
-import { useRouter } from "next/navigation";
+import { Card, CardContent, Typography, Box, CircularProgress, Button } from "@mui/material";
+
+function Flashcard({ question, answer }) {
+  const [flipped, setFlipped] = useState(false);
+
+  return (
+    <Box
+      onClick={() => setFlipped((f) => !f)}
+      sx={{
+        width: "100%",
+        height: 100,
+        borderRadius: 2,
+        boxShadow: 2,
+        cursor: "pointer",
+        perspective: "600px",
+        mb: 1,
+        position: "relative",
+        background: "#f5f5f5",
+      }}
+    >
+      <Box
+        sx={{
+          position: "absolute",
+          width: "100%",
+          height: "100%",
+          transition: "transform 0.5s",
+          transform: flipped ? "rotateY(180deg)" : "none",
+          backfaceVisibility: "hidden",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          fontWeight: 600,
+          fontSize: 18,
+          p: 2,
+        }}
+      >
+        {flipped ? answer : question}
+      </Box>
+    </Box>
+  );
+}
 
 export default function FlashcardPreview() {
   const [flashcards, setFlashcards] = useState([]);
   const [loading, setLoading] = useState(true);
-  const router = useRouter();
 
   useEffect(() => {
     async function fetchFlashcards() {
       setLoading(true);
       try {
-        const res = await fetch("/api/flashcards?limit=4");
+        const res = await fetch("/api/flashcards");
         const data = await res.json();
         if (data.success && Array.isArray(data.data)) setFlashcards(data.data);
-      } catch (e) {
-        setFlashcards([]);
+      } catch (err) {
+        // Optionally handle errors
       }
       setLoading(false);
     }
     fetchFlashcards();
   }, []);
 
+  if (loading) return <CircularProgress size={30} sx={{ my: 2 }} />;
+  if (flashcards.length === 0)
+    return <Typography variant="body2" color="text.secondary" sx={{ my: 2 }}>No flashcards yet.</Typography>;
+
   return (
-    <Card sx={{ mb: 2 }}>
-      <CardHeader
-        avatar={<QuizIcon color="primary" />}
-        title="Flashcards Preview"
-        sx={{ bgcolor: "#e6f0ff", pb: 0 }}
-        action={
-          <Button onClick={() => router.push("/flashcards")} size="small">
-            See all
-          </Button>
-        }
-      />
-      <CardContent>
-        <Grid container spacing={2}>
-          {loading
-            ? Array.from({ length: 4 }).map((_, i) => (
-                <Grid item xs={6} key={i}>
-                  <Skeleton variant="rectangular" width="100%" height={60} />
-                </Grid>
-              ))
-            : flashcards.length === 0
-            ? (
-              <Typography variant="body2" color="text.secondary">
-                No flashcards found.
-              </Typography>
-            )
-            : flashcards.map((fc) => (
-                <Grid item xs={6} key={fc._id}>
-                  <Box
-                    sx={{
-                      p: 1.5,
-                      bgcolor: "#fff",
-                      borderRadius: 2,
-                      border: "1px solid #e3e3e3",
-                      boxShadow: "0 2px 8px #0001",
-                      minHeight: 60,
-                    }}
-                  >
-                    <Typography variant="subtitle2" sx={{ fontWeight: 700 }}>
-                      {fc.front}
-                    </Typography>
-                    <Typography variant="body2" color="text.secondary">
-                      {fc.back.length > 30
-                        ? fc.back.slice(0, 28) + "…"
-                        : fc.back}
-                    </Typography>
-                    <Typography variant="caption" color="primary">
-                      {fc.subject}
-                    </Typography>
-                  </Box>
-                </Grid>
-              ))}
-        </Grid>
-      </CardContent>
-    </Card>
+    <Box>
+      {flashcards.slice(0, 3).map((card, i) => (
+        <Flashcard key={card._id || i} question={card.question} answer={card.answer} />
+      ))}
+      <Button fullWidth size="small" sx={{ mt: 1 }} variant="outlined" href="/flashcards">
+        View All Flashcards
+      </Button>
+    </Box>
   );
 }
