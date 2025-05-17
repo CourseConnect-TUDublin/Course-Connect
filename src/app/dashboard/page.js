@@ -1,4 +1,3 @@
-// src/app/dashboard/page.js
 "use client";
 import React, { useCallback, useState, useEffect } from "react";
 import DashboardLayout from "./DashboardLayout";
@@ -20,12 +19,16 @@ export default function CourseConnectDashboard() {
       const res = await fetch(`/api/timetable`);
       const data = await res.json();
       if (data.success) setTimetable(data.data);
-    } catch (err) { console.error(err); }
+    } catch (err) {
+      console.error(err);
+    }
   }, []);
+
   useEffect(() => {
     if (status !== "loading" && !session) router.push("/login");
     fetchTimetable();
   }, [session, status, router, fetchTimetable]);
+
   const userName = session?.user?.email || "Guest";
 
   return (
@@ -34,19 +37,28 @@ export default function CourseConnectDashboard() {
         <Typography variant="h4" gutterBottom sx={{ fontWeight: 700 }}>
           Welcome, {userName}!
         </Typography>
+        {/* SummaryCards now supports animated cards */}
         <SummaryCards router={router} />
+
         <Grid container spacing={3}>
-          {/* Left: Flashcards, Quick Actions, Announcements */}
+          {/* Left: Flashcards, Quick Actions, Rewards (updated) */}
           <Grid item xs={12} md={4}><LeftSidebar router={router} /></Grid>
           {/* Center: Timetable */}
           <Grid item xs={12} md={4}>
             <Paper sx={{ p: 2, borderRadius: 2 }}>
-              <Typography variant="h6" gutterBottom>Upcoming Timetable</Typography>
-              <TimetablePreview events={timetable} onOpenTimetable={() => router.push("/timetable")} />
+              <Typography variant="h6" gutterBottom>
+                Upcoming Timetable
+              </Typography>
+              <TimetablePreview
+                events={timetable}
+                onOpenTimetable={() => router.push("/timetable")}
+              />
             </Paper>
           </Grid>
           {/* Right: Focus Timer, Progress, Quick Note */}
-          <Grid item xs={12} md={4}><FocusPanel router={router} /></Grid>
+          <Grid item xs={12} md={4}>
+            <FocusPanel router={router} />
+          </Grid>
         </Grid>
       </Box>
     </DashboardLayout>
