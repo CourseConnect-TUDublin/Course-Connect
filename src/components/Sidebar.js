@@ -26,6 +26,12 @@ import {
 const sidebarItems = [
   { label: "Home", route: "/home", icon: <Home /> },
   { label: "Dashboard", route: "/dashboard", icon: <DashboardIcon /> },
+
+  // --- Gamification Features ---
+  { label: "Rewards", route: "/rewards", icon: <CheckBox /> },
+  { label: "Leaderboard", route: "/leaderboard", icon: <People /> },
+  // { label: "Reward Store", route: "/rewards/store", icon: <StoreIcon /> }, // Optional
+
   { label: "Task Manager", route: "/TaskManager", icon: <Assignment /> },
   { label: "Timetable", route: "/timetable", icon: <CalendarToday /> },
   { label: "Flashcards", route: "/flashcards", icon: <Assignment /> },
@@ -44,6 +50,7 @@ const sidebarItems = [
   { label: "Settings", route: "/settings", icon: <Settings /> },
   { label: "Archive", route: "/TaskManager/archive", icon: <ArchiveIcon /> },
 ];
+
 
 export default function Sidebar() {
   const [openMenu, setOpenMenu] = useState(null);
