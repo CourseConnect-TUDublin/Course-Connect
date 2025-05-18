@@ -1,7 +1,5 @@
-// src/app/layout.js
 import "./globals.css";
-import ClientProviders from "../ClientProviders";
-import MainLayout from "../components/MainLayout";
+import SplashWrapper from "../components/SplashWrapper";
 
 export const metadata = {
   title: "Course Connect",
@@ -12,9 +10,7 @@ export default function RootLayout({ children }) {
   return (
     <html lang="en">
       <body>
-        <ClientProviders>
-          <MainLayout drawerWidth={240}>{children}</MainLayout>
-        </ClientProviders>
+        <SplashWrapper>{children}</SplashWrapper>
       </body>
     </html>
   );
