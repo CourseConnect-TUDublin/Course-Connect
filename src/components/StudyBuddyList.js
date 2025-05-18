@@ -23,6 +23,12 @@ import { debounce } from "lodash";
 import Link from "next/link";
 import SessionRequestForm from "./SessionRequestForm";
 
+// Helper to determine if user is online (active in last 5 min)
+function isOnline(lastActive) {
+  if (!lastActive) return false;
+  return Date.now() - new Date(lastActive).getTime() < 5 * 60 * 1000;
+}
+
 export default function StudyBuddyList() {
   const { data: session } = useSession();
   const currentId = session?.user?.id;
@@ -61,9 +67,9 @@ export default function StudyBuddyList() {
     return () => fetchBuddies.cancel();
   }, [search, fetchBuddies]);
 
-  // Apply online filter
+  // Use lastActive for "online" filter
   const displayed = filter === "online"
-    ? buddies.filter(b => b.status === "online")
+    ? buddies.filter(b => isOnline(b.lastActive))
     : buddies;
 
   return (
@@ -107,13 +113,10 @@ export default function StudyBuddyList() {
       {/* Buddy List */}
       {!loading && !error && displayed.length > 0 && (
         <List>
-          {displayed.map(({ _id, name, avatar, status }) => {
-            const stat = status || "offline";
-            const badgeColor = {
-              online:  "success",
-              offline: "default",
-              busy:    "warning"
-            }[stat] || "default";
+          {displayed.map(({ _id, name, avatar, lastActive }) => {
+            const online = isOnline(lastActive);
+            const badgeColor = online ? "success" : "default";
+            const statText = online ? "Online" : "Offline";
 
             // deterministic DM room id
             const roomId = [currentId, _id].sort().join("_");
@@ -153,7 +156,7 @@ export default function StudyBuddyList() {
                   </ListItemAvatar>
                   <ListItemText
                     primary={name}
-                    secondary={stat.charAt(0).toUpperCase() + stat.slice(1)}
+                    secondary={statText}
                   />
                 </ListItemButton>
               </ListItem>

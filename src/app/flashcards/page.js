@@ -1,64 +1,88 @@
 "use client";
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect } from "react";
 import {
   Box,
   Typography,
   Card,
   CardContent,
-  CardActions,
   Button,
   Container,
   TextField,
   Divider,
   IconButton,
   Stack,
-} from '@mui/material';
-import { motion, AnimatePresence } from 'framer-motion';
-import { Shuffle, Undo, ArrowBack, ArrowForward, Flip } from '@mui/icons-material';
+  CircularProgress,
+} from "@mui/material";
+import { motion, AnimatePresence } from "framer-motion";
+import { Shuffle, ArrowBack, ArrowForward, Flip } from "@mui/icons-material";
+import { useSession } from "next-auth/react";
+import { toast } from "react-toastify";
 
 export default function FlashcardsPage() {
-  // Default flashcards
-  const defaultCards = [
-    { question: "Define Pythagoras' theorem.", answer: "In a right-angled triangle, the square of the hypotenuse equals the sum of the squares of the other two sides." },
-    { question: "Capital of Ireland?", answer: "Dublin." },
-    { question: "Newton's 2nd Law?", answer: "Force equals mass times acceleration (F = m * a)." },
-  ];
-
-  // Load cards from localStorage or defaults
-  const [cards, setCards] = useState(() => {
-    if (typeof window !== 'undefined') {
-      const saved = localStorage.getItem('flashcards');
-      if (saved) return JSON.parse(saved);
-    }
-    return defaultCards;
-  });
-
-  // Persist cards
-  useEffect(() => {
-    if (typeof window !== 'undefined') {
-      localStorage.setItem('flashcards', JSON.stringify(cards));
-    }
-  }, [cards]);
-
+  const { data: session } = useSession();
+  const [cards, setCards] = useState([]);
+  const [loading, setLoading] = useState(true);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [flipped, setFlipped] = useState(false);
 
   // New card inputs
-  const [newQuestion, setNewQuestion] = useState('');
-  const [newAnswer, setNewAnswer] = useState('');
+  const [newQuestion, setNewQuestion] = useState("");
+  const [newAnswer, setNewAnswer] = useState("");
+  const [saving, setSaving] = useState(false);
 
-  // Helpers
-  const addCard = () => {
+  // Fetch cards from backend API
+  useEffect(() => {
+    setLoading(true);
+    fetch("/api/flashcards")
+      .then((res) => res.json())
+      .then((data) => {
+        if (data.data) setCards(data.data);
+        else if (Array.isArray(data)) setCards(data);
+        else setCards([]);
+      })
+      .catch(() => setCards([]))
+      .finally(() => setLoading(false));
+  }, []);
+
+  // Add card
+  const addCard = async () => {
     const q = newQuestion.trim();
     const a = newAnswer.trim();
-    if (!q || !a) return;
-    setCards(prev => [...prev, { question: q, answer: a }]);
-    setNewQuestion(''); setNewAnswer('');
-    setCurrentIndex(cards.length);
-    setFlipped(false);
+    if (!q || !a || !session?.user?.id) return;
+    setSaving(true);
+    try {
+      const res = await fetch("/api/flashcards", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ question: q, answer: a }),
+      });
+      const data = await res.json();
+      if (data.success && data.data) {
+        setCards((prev) => [data.data, ...prev]);
+        setNewQuestion("");
+        setNewAnswer("");
+        setCurrentIndex(0);
+        setFlipped(false);
+
+        // --- Award XP/Points for creating a flashcard ---
+        await fetch("/api/rewards", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            userId: session.user.id,
+            type: "CREATE_FLASHCARD", // Match your rewards service key
+          }),
+        });
+        toast.success("🎉 Flashcard created! +5 XP!");
+      }
+    } catch (err) {
+      toast.error("Failed to create flashcard.");
+    }
+    setSaving(false);
   };
 
+  // Helpers
   const shuffleCards = () => {
     let arr = [...cards];
     for (let i = arr.length - 1; i > 0; i--) {
@@ -70,11 +94,17 @@ export default function FlashcardsPage() {
     setFlipped(false);
   };
 
-  const nextCard = () => { setFlipped(false); setCurrentIndex((i) => (i + 1) % cards.length); };
-  const prevCard = () => { setFlipped(false); setCurrentIndex((i) => (i - 1 + cards.length) % cards.length); };
-  const flipCard = () => { setFlipped(f => !f); };
+  const nextCard = () => {
+    setFlipped(false);
+    setCurrentIndex((i) => (i + 1) % cards.length);
+  };
+  const prevCard = () => {
+    setFlipped(false);
+    setCurrentIndex((i) => (i - 1 + cards.length) % cards.length);
+  };
+  const flipCard = () => setFlipped((f) => !f);
 
-  const current = cards[currentIndex] || { question: '', answer: '' };
+  const current = cards[currentIndex] || { question: "", answer: "" };
 
   // Animation variants
   const variants = {
@@ -88,10 +118,10 @@ export default function FlashcardsPage() {
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         exit={{ opacity: 0, y: -20 }}
-        transition={{ duration: 0.4, ease: 'easeInOut' }}
+        transition={{ duration: 0.4, ease: "easeInOut" }}
       >
         <Container maxWidth="sm" sx={{ mt: 6, mb: 6 }}>
-          <Typography variant="h4" align="center" gutterBottom>
+          <Typography variant="h4" align="center" gutterBottom fontWeight={700}>
             Flashcards
           </Typography>
 
@@ -112,61 +142,116 @@ export default function FlashcardsPage() {
           </Stack>
 
           {/* Card Display */}
-          <Box sx={{ perspective: 1000 }}>
-            <motion.div
-              variants={variants}
-              animate={flipped ? 'back' : 'front'}
-              style={{ transformStyle: 'preserve-3d' }}
-            >
-              {/* Front Side */}
-              <Card sx={{ minHeight: 200, mb: 2, position: 'relative' }}>
-                <CardContent sx={{ backfaceVisibility: 'hidden' }}>
-                  <Typography variant="h6">
-                    {current.question}
-                  </Typography>
-                </CardContent>
-              </Card>
-
-              {/* Back Side */}
-              <Card
-                sx={{
-                  minHeight: 200,
-                  mb: 2,
-                  position: 'absolute',
-                  top: 0,
-                  left: 0,
-                  width: '100%',
-                  backfaceVisibility: 'hidden',
-                  transform: 'rotateY(180deg)',
-                }}
+          <Box sx={{ perspective: 1000, position: "relative", minHeight: 220 }}>
+            {loading ? (
+              <Box sx={{ display: "flex", justifyContent: "center", py: 6 }}>
+                <CircularProgress />
+              </Box>
+            ) : cards.length === 0 ? (
+              <Typography color="text.secondary" sx={{ py: 4, textAlign: "center" }}>
+                No flashcards available. Add your first one below!
+              </Typography>
+            ) : (
+              <motion.div
+                variants={variants}
+                animate={flipped ? "back" : "front"}
+                style={{ transformStyle: "preserve-3d" }}
               >
-                <CardContent>
-                  <Typography variant="h6">
-                    {current.answer}
-                  </Typography>
-                </CardContent>
-              </Card>
-            </motion.div>
+                {/* Front Side */}
+                <Card
+                  sx={{
+                    minHeight: 200,
+                    mb: 2,
+                    position: "relative",
+                    boxShadow: 6,
+                    borderRadius: 3,
+                    cursor: "pointer",
+                    userSelect: "none",
+                    background: "#FFF176", // Solid yellow
+                  }}
+                  onClick={flipCard}
+                >
+                  <CardContent sx={{ backfaceVisibility: "hidden" }}>
+                    <Typography variant="subtitle1" sx={{ color: "#0d47a1", fontWeight: 700 }}>
+                      Q:
+                    </Typography>
+                    <Typography variant="h6" sx={{ minHeight: 64, fontWeight: 500 }}>
+                      {current.question}
+                    </Typography>
+                    <Typography variant="caption" color="text.secondary">
+                      Tap to flip
+                    </Typography>
+                  </CardContent>
+                </Card>
+
+                {/* Back Side */}
+                <Card
+                  sx={{
+                    minHeight: 200,
+                    mb: 2,
+                    position: "absolute",
+                    top: 0,
+                    left: 0,
+                    width: "100%",
+                    backfaceVisibility: "hidden",
+                    transform: "rotateY(180deg)",
+                    boxShadow: 6,
+                    borderRadius: 3,
+                    cursor: "pointer",
+                    userSelect: "none",
+                    background: "#FFF176", // Solid yellow
+                  }}
+                  onClick={flipCard}
+                >
+                  <CardContent>
+                    <Typography variant="subtitle1" sx={{ color: "#2e7d32", fontWeight: 700 }}>
+                      A:
+                    </Typography>
+                    <Typography variant="h6" sx={{ minHeight: 64, fontWeight: 500 }}>
+                      {current.answer}
+                    </Typography>
+                    <Typography variant="caption" color="text.secondary">
+                      Tap to flip
+                    </Typography>
+                  </CardContent>
+                </Card>
+              </motion.div>
+            )}
           </Box>
 
           {/* Progress & Add New */}
-          <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 2 }}>
-            <Typography variant="caption">
-              {currentIndex + 1} / {cards.length}
-            </Typography>
-            <Button size="small" onClick={() => setCurrentIndex(0)}>Reset</Button>
-          </Stack>
+          {cards.length > 0 && (
+            <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 2 }}>
+              <Typography variant="caption" sx={{ fontWeight: 600 }}>
+                {currentIndex + 1} / {cards.length}
+              </Typography>
+              <Button size="small" onClick={() => setCurrentIndex(0)}>
+                Reset
+              </Button>
+            </Stack>
+          )}
 
           <Divider sx={{ mb: 2 }} />
 
           {/* New Card Form */}
-          <Box component="form" onSubmit={(e) => { e.preventDefault(); addCard(); }}>
+          <Box
+            component="form"
+            onSubmit={(e) => {
+              e.preventDefault();
+              addCard();
+            }}
+            sx={{ background: "#f5faff", p: 3, borderRadius: 3, boxShadow: 1 }}
+          >
+            <Typography variant="subtitle1" fontWeight={700} sx={{ mb: 1 }}>
+              Add New Flashcard
+            </Typography>
             <TextField
               label="New Question"
               fullWidth
               value={newQuestion}
               onChange={(e) => setNewQuestion(e.target.value)}
               sx={{ mb: 2 }}
+              disabled={saving}
             />
             <TextField
               label="New Answer"
@@ -174,10 +259,16 @@ export default function FlashcardsPage() {
               value={newAnswer}
               onChange={(e) => setNewAnswer(e.target.value)}
               sx={{ mb: 2 }}
+              disabled={saving}
             />
             <Box textAlign="right">
-              <Button type="submit" variant="contained">
-                Add Flashcard
+              <Button
+                type="submit"
+                variant="contained"
+                color="primary"
+                disabled={saving || !session?.user?.id}
+              >
+                {saving ? "Saving..." : "Add Flashcard"}
               </Button>
             </Box>
           </Box>
