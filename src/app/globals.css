@@ -1,13 +1,31 @@
-/* globals.css - Minimal reset and base styles */
+/* globals.css - Dashboard Minimal Reset & Base Styles */
 html, body, #__next {
   height: 100%;
   margin: 0;
   padding: 0;
-  font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
-  background-color: #ffffff;
-  color: #333333;
+  font-family: "Inter", "Helvetica Neue", Helvetica, Arial, sans-serif;
+  background-color: #fafbfc;   /* Softer, app-like */
+  color: #222;
   scroll-behavior: smooth;
 }
+
+body {
+  transition: background-color 0.3s, color 0.3s;
+  font-size: 16px;
+  line-height: 1.5;
+}
+
+/* Remove default margin on headings and paragraphs */
+h1, h2, h3, h4, h5, h6, p {
+  margin-top: 0;
+  margin-bottom: 0.7em;
+  font-weight: 600;
+}
+
+/* Tighter spacing for headings */
+h1 { font-size: 2.2rem; }
+h2 { font-size: 1.8rem; }
+h3 { font-size: 1.3rem; }
 
 a {
   color: inherit;
@@ -18,7 +36,56 @@ a {
   box-sizing: border-box;
 }
 
-/* Optional: Add a subtle transition for background-color and color changes */
-body {
-  transition: background-color 0.3s ease, color 0.3s ease;
+/* Reduce default spacing for MUI containers */
+.MuiContainer-root, .MuiPaper-root, .MuiCardContent-root {
+  padding-left: 16px !important;
+  padding-right: 16px !important;
 }
+
+/* Make sure sections have minimal vertical space */
+section, main {
+  padding: 0;
+  margin: 0;
+}
+
+/* Tighten up list and card spacing */
+ul, ol {
+  margin: 0 0 0.5em 0;
+  padding-left: 1.2em;
+}
+
+/* Optional: for mobile devices, less padding on small screens */
+@media (max-width: 600px) {
+  .MuiContainer-root, .MuiPaper-root, .MuiCardContent-root {
+    padding-left: 8px !important;
+    padding-right: 8px !important;
+  }
+}
+
+/* Dashboard-like subtle shadows */
+.MuiPaper-root, .MuiCard-root {
+  box-shadow: 0 1.5px 6px rgba(80,100,130,0.06);
+  border-radius: 12px;
+}
+
+input, textarea, select, button {
+  font-family: inherit;
+}
+
+/* Remove Chrome autofill yellow bg */
+input:-webkit-autofill,
+input:-webkit-autofill:focus {
+  box-shadow: 0 0 0 30px #fafbfc inset !important;
+  -webkit-box-shadow: 0 0 0 30px #fafbfc inset !important;
+}
+
+/* Tighter table and form spacing */
+table {
+  border-collapse: collapse;
+}
+th, td {
+  padding: 6px 10px;
+}
+
+/* Optional: Remove tap highlight on mobile */
+*:focus { outline: none; }
