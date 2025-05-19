@@ -1,7 +1,7 @@
 import dbConnect from "../../../../utils/dbConnect";
 import Session from "../../../../models/Session";
 import { NextResponse } from "next/server";
-// ✅ Keep only this one if your project supports path aliases
+
 import Notification from "@/models/Notification";
 
 export async function PATCH(req, { params }) {
