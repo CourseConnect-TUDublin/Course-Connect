@@ -1,17 +1,33 @@
 "use client";
-
 import { useState, useEffect, useRef } from 'react';
 import { ChevronDown, Play, Pause, RotateCw } from 'lucide-react';
 import styles from './focusTimer.module.css';
 
 export default function FocusTimerPage() {
+  const [programmeData, setProgrammeData] = useState([]); // All programme/course data from DB
   const [module, setModule] = useState('');
   const [duration, setDuration] = useState(25);
   const [timeLeft, setTimeLeft] = useState(25 * 60);
   const [running, setRunning] = useState(false);
   const timer = useRef(null);
 
-  // Reset time when duration changes
+  // Fetch programme/course data from API 
+  useEffect(() => {
+    async function fetchProgrammes() {
+      try {
+        const res = await fetch("/api/programmeData");
+        const json = await res.json();
+        if (json.success && Array.isArray(json.data)) {
+          setProgrammeData(json.data);
+        }
+      } catch (err) {
+        
+      }
+    }
+    fetchProgrammes();
+  }, []);
+
+  // Reset timer when duration changes
   useEffect(() => setTimeLeft(duration * 60), [duration]);
 
   // Timer countdown
@@ -21,25 +37,26 @@ export default function FocusTimerPage() {
     } else {
       clearInterval(timer.current);
     }
-
     if (timeLeft === 0) {
       setRunning(false);
       alert('Focus session complete!');
     }
-
     return () => clearInterval(timer.current);
   }, [running, timeLeft]);
 
   const format = (s) => `${String(Math.floor(s / 60)).padStart(2, '0')}:${String(s % 60).padStart(2, '0')}`;
 
+  
+  const allCourses = programmeData.flatMap(p =>
+    (Array.isArray(p.courses) ? p.courses : [])
+  );
+
   return (
     <main className={styles.container}>
       <h1>Focus Timer</h1>
-
       <div className={styles.timerCircle}>
         <h2>{format(timeLeft)}</h2>
       </div>
-
       <div>
         <button className={styles.timerButton} onClick={() => setRunning(!running)}>
           {running ? <Pause size={32} /> : <Play size={32} />}
@@ -48,20 +65,18 @@ export default function FocusTimerPage() {
           <RotateCw size={24} />
         </button>
       </div>
-
       <div className={styles.moduleSelect}>
         <label>What are you studying?</label>
         <div className={styles.dropdown}>
           <select value={module} onChange={(e) => setModule(e.target.value)}>
             <option value="">Select module</option>
-            {['Web Dev', 'Algorithms', 'Cybersecurity', 'AI'].map((mod) => (
+            {allCourses.map((mod) => (
               <option key={mod} value={mod}>{mod}</option>
             ))}
           </select>
           <ChevronDown size={16} />
         </div>
       </div>
-
       <div className={styles.presetButtons}>
         {[5, 25, 45, 60, 90].map((min) => (
           <button
