@@ -1,9 +1,8 @@
 // src/app/api/sessions/[id]/route.js
 import dbConnect from "../../../../utils/dbConnect";
 import Session from "../../../../models/Session";
-import Notification from "../../../../models/Notification";
 import { NextResponse } from "next/server";
-import Notification from "@/models/Notification";
+import Notification from "@/models/Notification"; // ✅ Keep only the alias import
 
 export async function PATCH(req, { params }) {
   await dbConnect();
@@ -38,9 +37,6 @@ export async function PATCH(req, { params }) {
     return NextResponse.json(updated);
   } catch (err) {
     console.error("Error in PATCH /api/sessions/[id]:", err);
-    return NextResponse.json(
-      { error: err.message },
-      { status: 400 }
-    );
+    return NextResponse.json({ error: err.message }, { status: 400 });
   }
 }
