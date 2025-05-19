@@ -1,15 +1,14 @@
-// src/app/api/sessions/[id]/route.js
 import dbConnect from "../../../../utils/dbConnect";
 import Session from "../../../../models/Session";
 import { NextResponse } from "next/server";
-import Notification from "@/models/Notification"; // ✅ Keep only the alias import
+// ✅ Keep only this one if your project supports path aliases
+import Notification from "@/models/Notification";
 
 export async function PATCH(req, { params }) {
   await dbConnect();
   try {
     const { status } = await req.json();
 
-    // Update session status and populate user info
     const updated = await Session.findByIdAndUpdate(
       params.id,
       { status },
@@ -18,9 +17,7 @@ export async function PATCH(req, { params }) {
       .populate("host", "name avatar")
       .populate("participants", "name avatar");
 
-    // If session was just confirmed, notify the other participant(s)
     if (status === "confirmed" && updated) {
-      // Send to everyone in participants except the host
       const recipients = updated.participants
         .filter(p => p._id.toString() !== updated.host._id.toString())
         .map(p => p._id);
