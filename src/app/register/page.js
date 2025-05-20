@@ -150,27 +150,40 @@ export default function Register() {
       </TextField>
 
       {/* Course multi-select */}
-      <FormGroup sx={{ my: 2 }}>
-        <Typography sx={{ mb: 1, fontWeight: 500 }}>Select up to 5 Courses</Typography>
-        {courses.length === 0 && formData.programme &&
-          <Typography color="text.secondary" sx={{ mb: 1 }}>No courses found</Typography>
-        }
-        {courses.map(course => (
-          <FormControlLabel
-            key={course}
-            control={
-              <Checkbox
-                checked={formData.courses.includes(course)}
-                onChange={() => handleCourseToggle(course)}
-                disabled={
-                  !formData.courses.includes(course) && formData.courses.length >= 5
-                }
-              />
-            }
-            label={course}
-          />
-        ))}
-      </FormGroup>
+      <FormGroup
+  sx={{
+    my: 2,
+    maxHeight: 200,       
+    overflowY: "auto",
+    border: "1px solid #eee",
+    borderRadius: 2,
+    p: 1,
+    background: "#fafbfc",
+  }}
+>
+  <Typography sx={{ mb: 1, fontWeight: 500, position: "sticky", top: 0, zIndex: 1, background: "#fafbfc" }}>
+    Select up to 5 Courses
+  </Typography>
+  {courses.length === 0 && formData.programme &&
+    <Typography color="text.secondary" sx={{ mb: 1 }}>No courses found</Typography>
+  }
+  {courses.map(course => (
+    <FormControlLabel
+      key={course}
+      control={
+        <Checkbox
+          checked={formData.courses.includes(course)}
+          onChange={() => handleCourseToggle(course)}
+          disabled={
+            !formData.courses.includes(course) && formData.courses.length >= 5
+          }
+        />
+      }
+      label={course}
+    />
+  ))}
+</FormGroup>
+
 
       {/* Semester radio buttons */}
       <Typography sx={{ mb: 1, fontWeight: 500 }}>Semester</Typography>
