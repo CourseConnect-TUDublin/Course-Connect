@@ -74,7 +74,7 @@ export default function FocusPanel({ router }) {
   const xp = user?.xp ?? 0;
   const { level, xpToNext, xpIntoLevel, percent } = getLevelFromXP(xp);
 
-  // 🧠 Handle Focus End → award XP
+  // Handle Focus End → award XP
   const handleEndSession = async () => {
     setRunning(false);
     setFocusTime(FOCUS_DURATION);
