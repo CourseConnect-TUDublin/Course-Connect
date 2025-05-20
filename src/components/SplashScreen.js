@@ -8,8 +8,8 @@ export default function SplashScreen() {
   return (
     <Box
       sx={{
-        position: "fixed",       // Cover the entire viewport
-        inset: 0,                // Top: 0, right: 0, bottom: 0, left: 0
+        position: "fixed",
+        inset: 0,
         minHeight: "100vh",
         height: "100vh",
         width: "100vw",
@@ -19,23 +19,24 @@ export default function SplashScreen() {
         alignItems: "center",
         justifyContent: "center",
         color: "#1976d2",
-        zIndex: 9999,            // Make sure it appears above other content
+        zIndex: 9999,
+        p: 2, // add padding for extra safety
       }}
     >
-      <Image
-        src="/logo.png"
-        alt="Course Connect Logo"
-        width={400}
-        height={200}
-        style={{
-          width: "80vw",
-          maxWidth: 400,
-          height: "auto",
-          marginBottom: 36,
-          display: "block",
-        }}
-        priority
-      />
+      <Box sx={{ width: "100%", display: "flex", justifyContent: "center", overflow: "hidden" }}>
+        <Image
+          src="/logo.png"
+          alt="Course Connect Logo"
+          width={400}
+          style={{
+            width: "90vw",
+            maxWidth: 220, 
+            marginBottom: 36,
+            display: "block",
+          }}
+          priority
+        />
+      </Box>
       <Typography
         variant="h3"
         fontWeight={700}
