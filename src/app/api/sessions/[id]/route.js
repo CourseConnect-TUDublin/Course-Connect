@@ -1,8 +1,7 @@
 import dbConnect from "../../../../utils/dbConnect";
 import Session from "../../../../models/Session";
 import { NextResponse } from "next/server";
-
-import Notification from "@/models/Notification";
+import Notification from "@/models/Notification"; // ✅ Keep this line
 
 export async function PATCH(req, { params }) {
   await dbConnect();
