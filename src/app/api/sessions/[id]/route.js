@@ -3,7 +3,7 @@ import dbConnect from "../../../../utils/dbConnect";
 import Session from "../../../../models/Session";
 import Notification from "../../../../models/Notification";
 import { NextResponse } from "next/server";
-import Notification from "@/models/Notification";
+
 
 export async function PATCH(req, { params }) {
   await dbConnect();
