@@ -37,7 +37,6 @@ export default function CourseConnectDashboard() {
         <Typography variant="h4" gutterBottom sx={{ fontWeight: 700 }}>
           Welcome, {userName}!
         </Typography>
-        {/* SummaryCards now supports animated cards */}
         <SummaryCards router={router} />
 
         <Grid container spacing={3}>

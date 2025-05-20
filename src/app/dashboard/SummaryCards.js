@@ -1,23 +1,86 @@
 // src/app/dashboard/SummaryCards.js
 "use client";
-import React from "react";
-import { Grid, Card, CardHeader, CardContent, Typography, CardActionArea } from "@mui/material";
-import { Event, Today, CheckCircle } from "@mui/icons-material";
+
+import React, { useEffect, useState } from "react";
+import {
+  Grid,
+  Card,
+  CardHeader,
+  CardContent,
+  Typography,
+  CardActionArea,
+} from "@mui/material";
+import { Event, Today, CheckCircle, MenuBook } from "@mui/icons-material";
 import { motion } from "framer-motion";
+import { useSession } from "next-auth/react";
 
 export default function SummaryCards({ router }) {
-  const metrics = {
-    tasksDue: 3,
-    classesThisWeek: 5,
-    upcomingDeadlines: 2,
-    focusStreak: 4,
-  };
+  const { data: session } = useSession();
+  const user = session?.user;
+
+  const [metrics, setMetrics] = useState({
+    tasksToday: 0,
+    focusStreak: 0,
+    nextClass: "--",
+  });
+
+  useEffect(() => {
+    async function fetchMetrics() {
+      try {
+        const [tasksRes, streakRes, classRes] = await Promise.all([
+          fetch("/api/tasks/today"),
+          fetch("/api/streak"),
+          fetch("/api/timetable/next"),
+        ]);
+
+        const [tasks, streak, nextClass] = await Promise.all([
+          tasksRes.json(),
+          streakRes.json(),
+          classRes.json(),
+        ]);
+
+        setMetrics({
+          tasksToday: tasks?.count ?? 0,
+          focusStreak: streak?.days ?? 0,
+          nextClass: nextClass?.time ?? "--",
+        });
+      } catch (err) {
+        console.error("Failed to load metrics:", err);
+      }
+    }
+
+    fetchMetrics();
+  }, []);
 
   const cards = [
-    { icon: Event, title: "Tasks Due", value: metrics.tasksDue, route: "/TaskManager", color: "#e3f2fd" },
-    { icon: Today, title: "Classes This Week", value: metrics.classesThisWeek, route: "/timetable", color: "#fff9c4" },
-    { icon: CheckCircle, title: "Deadlines", value: metrics.upcomingDeadlines, route: "/assignments", color: "#ffe0b2" },
-    { icon: CheckCircle, title: "Focus Streak", value: `${metrics.focusStreak} days`, route: "/focus", color: "#c8e6c9" },
+    {
+      icon: Event,
+      title: "Tasks Due Today",
+      value: metrics.tasksToday,
+      route: "/TaskManager",
+      color: "#e3f2fd",
+    },
+    {
+      icon: CheckCircle,
+      title: "Study Streak",
+      value: `${metrics.focusStreak} days`,
+      route: "/focus-history",
+      color: "#c8e6c9",
+    },
+    {
+      icon: Today,
+      title: "Next Class",
+      value: metrics.nextClass,
+      route: "/timetable",
+      color: "#fff9c4",
+    },
+    {
+      icon: MenuBook,
+      title: "Study Hub",
+      value: "Explore",
+      route: "/studyhub",
+      color: "#ffe0b2",
+    },
   ];
 
   return (
@@ -32,13 +95,15 @@ export default function SummaryCards({ router }) {
               whileHover={{
                 scale: 1.04,
                 boxShadow: "0 8px 28px #1976d214",
-                transition: { duration: 0.2 }
+                transition: { duration: 0.2 },
               }}
             >
               <Card sx={{ borderRadius: 3, bgcolor: card.color }}>
                 <CardHeader avatar={<card.icon />} title={card.title} />
                 <CardContent>
-                  <Typography variant="h5" sx={{ fontWeight: 800 }}>{card.value}</Typography>
+                  <Typography variant="h5" sx={{ fontWeight: 800 }}>
+                    {card.value}
+                  </Typography>
                 </CardContent>
               </Card>
             </motion.div>
