@@ -1,7 +1,6 @@
 "use client";
 
 import React from "react";
-import Image from "next/image";
 import { Box, Typography, CircularProgress } from "@mui/material";
 
 export default function SplashScreen() {
@@ -20,21 +19,30 @@ export default function SplashScreen() {
         justifyContent: "center",
         color: "#1976d2",
         zIndex: 9999,
-        p: 2, // add padding for extra safety
+        p: 2,
       }}
     >
-      <Box sx={{ width: "100%", display: "flex", justifyContent: "center", overflow: "hidden" }}>
-        <Image
+      <Box
+        sx={{
+          width: "100vw",
+          maxWidth: 220,          
+          aspectRatio: "3/1",     
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          marginBottom: 3,
+          overflow: "hidden",
+        }}
+      >
+        <img
           src="/logo.png"
           alt="Course Connect Logo"
-          width={400}
           style={{
-            width: "90vw",
-            maxWidth: 220, 
-            marginBottom: 36,
+            width: "100%",
+            height: "auto",
+            objectFit: "contain",
             display: "block",
           }}
-          priority
         />
       </Box>
       <Typography
