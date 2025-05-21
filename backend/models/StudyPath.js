@@ -2,25 +2,26 @@ const mongoose = require('mongoose');
 
 const studyPathSchema = new mongoose.Schema({
   courseId: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: 'Course',
-    required: true
+    type: String,
+    required: true,
+    ref: 'Course'
   },
   year: {
     type: Number,
     required: true,
     min: 1,
-    max: 6
+    max: 4
   },
   semester: {
     type: Number,
     required: true,
-    enum: [1, 2]
+    min: 1,
+    max: 2
   },
   group: {
     type: String,
     required: true,
-    trim: true
+    enum: ['General', 'A', 'B', 'C']
   },
   createdAt: {
     type: Date,
@@ -34,4 +35,6 @@ studyPathSchema.index(
   { unique: true }
 );
 
-module.exports = mongoose.model('StudyPath', studyPathSchema); 
+const StudyPath = mongoose.model('StudyPath', studyPathSchema);
+
+module.exports = StudyPath; 

@@ -13,6 +13,10 @@ const taskRoutes = require('./routes/tasks');
 const timetableRoutes = require('./routes/timetable');
 const chatRoutes = require('./routes/chat');
 const testRoutes = require('./routes/test');
+const disciplineRoutes = require('./routes/disciplines');
+const courseRoutes = require('./routes/courses');
+const studyPathRoutes = require('./routes/studyPaths');
+const moduleRoutes = require('./routes/modules');
 
 // MongoDB Connection with error handling
 mongoose.connect(process.env.MONGODB_URI, {
@@ -61,6 +65,10 @@ app.use('/api/tasks', taskRoutes);
 app.use('/api/timetable', timetableRoutes);
 app.use('/api/chat', chatRoutes);
 app.use('/api', testRoutes);
+app.use('/api/disciplines', disciplineRoutes);
+app.use('/api/courses', courseRoutes);
+app.use('/api/study-paths', studyPathRoutes);
+app.use('/api/modules', moduleRoutes);
 
 // Health check route
 app.get('/api/health', (req, res) => {

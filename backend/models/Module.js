@@ -12,31 +12,36 @@ const moduleSchema = new mongoose.Schema({
     unique: true,
     trim: true
   },
-  semester: {
-    type: Number,
+  courseId: {
+    type: String,
     required: true,
-    enum: [1, 2]
+    ref: 'Course'
+  },
+  studyPathId: {
+    type: mongoose.Schema.Types.ObjectId,
+    required: true,
+    ref: 'StudyPath'
   },
   year: {
     type: Number,
     required: true,
     min: 1,
-    max: 6
+    max: 4
   },
-  courseId: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: 'Course',
-    required: true
-  },
-  credits: {
+  semester: {
     type: Number,
     required: true,
-    default: 5,
     min: 1,
-    max: 30
+    max: 2
+  },
+  group: {
+    type: String,
+    required: true,
+    enum: ['General', 'A', 'B', 'C']
   },
   isElective: {
     type: Boolean,
+    required: true,
     default: false
   },
   createdAt: {
@@ -45,10 +50,11 @@ const moduleSchema = new mongoose.Schema({
   }
 });
 
-// Create compound index for unique module names within a course
-moduleSchema.index(
-  { name: 1, courseId: 1, year: 1, semester: 1 },
-  { unique: true }
-);
+// Create indexes for common queries
+moduleSchema.index({ courseId: 1, year: 1, semester: 1 });
+moduleSchema.index({ studyPathId: 1 });
+moduleSchema.index({ code: 1 }, { unique: true });
 
-module.exports = mongoose.model('Module', moduleSchema); 
+const Module = mongoose.model('Module', moduleSchema);
+
+module.exports = Module; 
