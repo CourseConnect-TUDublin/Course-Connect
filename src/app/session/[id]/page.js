@@ -1,4 +1,3 @@
-// src/app/session/[id]/page.js
 "use client";
 import React, { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
@@ -139,8 +138,14 @@ export default function SessionPage() {
         )}
       </Paper>
 
-      <Paper sx={{ p: 3 }}>
-        <Chat room={`session-${sessionData._id}`} currentUser={currentUser} />
+      {/* Chat placeholder removed */}
+      <Paper sx={{ p: 3, textAlign: "center", color: "#888" }}>
+        <Typography variant="h6" gutterBottom>
+          Group Chat Unavailable
+        </Typography>
+        <Typography variant="body2">
+          Live chat has been disabled for this session.
+        </Typography>
       </Paper>
     </Box>
   );
