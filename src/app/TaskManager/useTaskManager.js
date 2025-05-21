@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
-import { toast } from "react-toastify";
+import toast from "react-hot-toast"; // Use react-hot-toast for consistent popups
 
 export default function useTaskManager(userId) {
   const [tasks, setTasks] = useState({ red: [], amber: [], green: [] });
@@ -14,7 +14,7 @@ export default function useTaskManager(userId) {
   const [searchTerm, setSearchTerm] = useState("");
   const [sortOrder, setSortOrder] = useState("asc");
 
-  // XP AWARD FUNCTION
+  // ---- XP & Rewards ----
   async function awardXP(amount = 10) {
     try {
       const res = await fetch("/api/xp/gain", {
@@ -24,8 +24,30 @@ export default function useTaskManager(userId) {
       });
       const data = await res.json();
       if (data.success) {
-        toast.success(`+${amount} XP for completing a task!`);
-        // Optionally, trigger a user data refresh or update profile
+        toast.success(
+          <span>
+            <b>+{amount} XP!</b> <br /> Task completed!
+          </span>,
+          { icon: "✨" }
+        );
+        // If your endpoint returns level up/badge info:
+        if (data.levelUp) {
+          toast(
+            <span>
+              <b>🚀 Level Up!</b><br />
+              You reached level {data.newLevel}!
+            </span>,
+            { icon: "🥇", duration: 4000 }
+          );
+        }
+        if (data.newBadge) {
+          toast(
+            <span>
+              <b>🏅 New Badge:</b> {data.newBadge}
+            </span>,
+            { duration: 4000 }
+          );
+        }
       } else {
         toast.error("Failed to award XP");
       }
@@ -34,7 +56,7 @@ export default function useTaskManager(userId) {
     }
   }
 
-  // Fetch tasks from backend API
+  // ---- Fetch all tasks for the current user ----
   const fetchTasks = useCallback(async () => {
     try {
       const res = await fetch("/api/tasks");
@@ -42,9 +64,7 @@ export default function useTaskManager(userId) {
       if (data.success) {
         const grouped = { red: [], amber: [], green: [] };
         data.data.forEach((task) => {
-          if (grouped[task.status]) {
-            grouped[task.status].push(task);
-          }
+          if (grouped[task.status]) grouped[task.status].push(task);
         });
         setTasks(grouped);
       } else {
@@ -59,17 +79,11 @@ export default function useTaskManager(userId) {
     fetchTasks();
   }, [fetchTasks]);
 
-  // Add new task via backend API
+  // ---- Add new task ----
   const handleAddTask = async () => {
     if (newTask.title.trim() === "") return;
-    if (!newTask.dueDate) {
-      alert("Due date is required!");
-      return;
-    }
-    if (!userId) {
-      alert("User information is still loading. Please try again.");
-      return;
-    }
+    if (!newTask.dueDate) return alert("Due date is required!");
+    if (!userId) return alert("User information loading. Try again.");
     const columnTasks = tasks[newTask.status] || [];
     const order = columnTasks.length;
     const taskToAdd = {
@@ -86,7 +100,7 @@ export default function useTaskManager(userId) {
       });
       const data = await res.json();
       if (data.success) {
-        toast.success("Task added successfully!");
+        toast.success("Task added!");
         fetchTasks();
         setNewTask({ title: "", description: "", status: "red", dueDate: "", order: 0 });
       } else {
@@ -97,15 +111,13 @@ export default function useTaskManager(userId) {
     }
   };
 
-  // Delete task via backend API
+  // ---- Delete task ----
   const handleDeleteTask = async (id) => {
     try {
-      const res = await fetch(`/api/tasks?id=${id}`, {
-        method: "DELETE",
-      });
+      const res = await fetch(`/api/tasks?id=${id}`, { method: "DELETE" });
       const data = await res.json();
       if (data.success) {
-        toast.success("Task deleted successfully!");
+        toast.success("Task deleted!");
         fetchTasks();
       }
     } catch {
@@ -113,7 +125,7 @@ export default function useTaskManager(userId) {
     }
   };
 
-  // Archive task (set archived to true)
+  // ---- Archive task ----
   const handleArchiveTask = async (id) => {
     const taskToArchive = Object.values(tasks).flat().find((t) => t._id === id);
     if (!taskToArchive) return;
@@ -126,7 +138,7 @@ export default function useTaskManager(userId) {
       });
       const data = await res.json();
       if (data.success) {
-        toast.success("Task archived successfully!");
+        toast.success("Task archived!");
         fetchTasks();
       }
     } catch {
@@ -134,13 +146,12 @@ export default function useTaskManager(userId) {
     }
   };
 
-  // Open edit modal
+  // ---- Edit modal ----
   const handleEditTask = (task) => setEditingTask(task);
 
-  // Save updated task via backend API (and check for XP)
+  // ---- Save edited task (award XP if moved to green) ----
   const handleSaveTask = async () => {
     if (!editingTask) return;
-    // Get original status before editing
     const originalTask = Object.values(tasks).flat().find((t) => t._id === editingTask._id);
     const wasNotCompleted = originalTask?.status !== "green";
     try {
@@ -151,12 +162,12 @@ export default function useTaskManager(userId) {
       });
       const data = await res.json();
       if (data.success) {
-        toast.success("Task updated successfully!");
+        toast.success("Task updated!");
         setEditingTask(null);
         fetchTasks();
         // Award XP if status changed to completed
         if (editingTask.status === "green" && wasNotCompleted) {
-          await awardXP(10); // Award 10 XP (or set your value)
+          await awardXP(10);
         }
       }
     } catch {
@@ -164,7 +175,7 @@ export default function useTaskManager(userId) {
     }
   };
 
-  // Filtering and sorting tasks
+  // ---- Filtering/sorting for display ----
   const filterAndSortTasks = (tasksObj) => {
     const filtered = {};
     Object.keys(tasksObj).forEach((status) => {
@@ -182,7 +193,7 @@ export default function useTaskManager(userId) {
     return filtered;
   };
 
-  // Update backend order for tasks in a specific column
+  // ---- Update column order ----
   const updateColumnOrder = async (status, items) => {
     for (let i = 0; i < items.length; i++) {
       const updatedTask = { ...items[i], order: i };
@@ -196,7 +207,7 @@ export default function useTaskManager(userId) {
     }
   };
 
-  // Drag and drop handler (with XP integration)
+  // ---- Drag/drop handler (award XP if dropped to green) ----
   const onDragEnd = async (result) => {
     const { source, destination } = result;
     if (!destination) return;
@@ -228,18 +239,18 @@ export default function useTaskManager(userId) {
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(movedItem),
         });
-        // Award XP only if now moved to green and wasn't before
+        // Award XP if moved to green and wasn't before
         if (movedItem.status === "green" && wasNotCompleted) {
-          await awardXP(10); // or your chosen value
+          await awardXP(10);
         }
-        toast.success("Task moved successfully!");
+        toast.success("Task moved!");
       } catch {
         toast.error("Error updating task status.");
       }
     }
   };
 
-  // Helper for reordering items in a list
+  // ---- Reorder helper ----
   const reorder = (list, startIndex, endIndex) => {
     const result = Array.from(list);
     const [removed] = result.splice(startIndex, 1);

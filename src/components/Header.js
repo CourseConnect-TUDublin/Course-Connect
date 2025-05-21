@@ -32,7 +32,7 @@ export default function Header({ toggleSidebar, drawerWidth }) {
   const isMobile = useMediaQuery(theme.breakpoints.down("md"));
 
   const [mobileOpen, setMobileOpen] = useState(false);
-  const handleDrawerToggle = () => setMobileOpen(!mobileOpen);
+  const handleDrawerToggle = () => setMobileOpen((open) => !open);
 
   const navItems = [
     { label: "Home", route: "/home" },
@@ -40,7 +40,7 @@ export default function Header({ toggleSidebar, drawerWidth }) {
     // Add more if needed
   ];
 
-  // Drawer content with ListItemButton instead of ListItem button
+  // Drawer content for mobile menu
   const drawerContent = (
     <Box sx={{ width: 240, p: 2 }}>
       <List>
@@ -49,13 +49,27 @@ export default function Header({ toggleSidebar, drawerWidth }) {
             <ListItemButton
               component={Link}
               href={item.route}
-              onClick={handleDrawerToggle}
               selected={pathname === item.route}
+              onClick={handleDrawerToggle}
             >
               <ListItemText primary={item.label} />
             </ListItemButton>
           </ListItem>
         ))}
+        {/* Profile link */}
+        <ListItem disablePadding>
+          <ListItemButton
+            component={Link}
+            href="/profile"
+            selected={pathname === "/profile"}
+            onClick={handleDrawerToggle}
+          >
+            <Avatar sx={{ width: 28, height: 28, mr: 1 }}>
+              {userName.charAt(0).toUpperCase()}
+            </Avatar>
+            <ListItemText primary="Profile" />
+          </ListItemButton>
+        </ListItem>
         <ListItem disablePadding>
           <ListItemButton onClick={() => signOut({ callbackUrl: "/login" })}>
             <ListItemText primary="Sign Out" />
@@ -96,6 +110,7 @@ export default function Header({ toggleSidebar, drawerWidth }) {
                 color="inherit"
                 edge="start"
                 sx={{ mr: 2, display: { md: "none" } }}
+                aria-label="Open menu"
               >
                 <MenuIcon />
               </IconButton>
@@ -105,6 +120,7 @@ export default function Header({ toggleSidebar, drawerWidth }) {
             </Typography>
           </Box>
 
+          {/* Desktop navigation */}
           <Box
             sx={{
               display: { xs: "none", md: "flex" },
@@ -130,6 +146,7 @@ export default function Header({ toggleSidebar, drawerWidth }) {
 
             <NotificationsBell />
 
+            {/* Profile link */}
             <IconButton onClick={() => router.push("/profile")}>
               <Avatar sx={{ width: 32, height: 32 }}>
                 {userName.charAt(0).toUpperCase()}

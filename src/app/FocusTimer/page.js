@@ -47,11 +47,15 @@ export default function FocusTimerPage() {
     }
 
     return () => clearInterval(timer.current);
+    // eslint-disable-next-line
   }, [running, timeLeft]);
 
-  const format = (s) => `${String(Math.floor(s / 60)).padStart(2, "0")}:${String(s % 60).padStart(2, "0")}`;
+  const format = (s) =>
+    `${String(Math.floor(s / 60)).padStart(2, "0")}:${String(s % 60).padStart(2, "0")}`;
 
-  const allCourses = programmeData.flatMap((p) => Array.isArray(p.courses) ? p.courses : []);
+  const allCourses = programmeData.flatMap((p) =>
+    Array.isArray(p.courses) ? p.courses : []
+  );
 
   const handleStart = () => {
     if (duration < 1) {
@@ -69,6 +73,7 @@ export default function FocusTimerPage() {
     }
   };
 
+  // POPUP animation logic
   const handleEndSession = async (type) => {
     setRunning(false);
     clearInterval(timer.current);
@@ -80,6 +85,7 @@ export default function FocusTimerPage() {
     const xpEarned = Math.max(1, Math.floor(totalSeconds / 300)); // 1 XP per 5 min
 
     try {
+      // Log session
       await fetch("/api/focus-log/create", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -94,6 +100,7 @@ export default function FocusTimerPage() {
         }),
       });
 
+      // Award XP for the session
       const xpRes = await fetch("/api/xp/gain", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -102,12 +109,43 @@ export default function FocusTimerPage() {
 
       const xpData = await xpRes.json();
       if (xpData.success) {
-        toast.success(`+${xpEarned} XP earned!`);
+        // Animate XP gained popup
+        toast(
+          <span>
+            <b>🎯 Session Complete!</b>
+            <br />
+            <span style={{ fontSize: "1.15em", color: "#22c55e" }}>
+              +{xpEarned} XP Earned
+            </span>
+          </span>,
+          {
+            icon: "🔥",
+            duration: 4000,
+            style: { background: "#fffde7", color: "#222", fontWeight: 600 },
+          }
+        );
+
+        // Optionally show level up if your API returns this
+        if (xpData.levelUp) {
+          toast(
+            <span>
+              <b>🚀 Level Up!</b>
+              <br />
+              You reached level {xpData.newLevel}!
+            </span>,
+            { icon: "🥇", duration: 4000 }
+          );
+        }
       } else {
         toast.error("XP update failed.");
       }
 
-      toast.success("Session logged.");
+      toast.success(
+        type === "complete"
+          ? "Focus session logged!"
+          : "Session ended early and logged.",
+        { duration: 3000 }
+      );
     } catch (err) {
       toast.error("Error saving session");
       console.error(err);
