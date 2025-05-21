@@ -13,10 +13,16 @@ export async function GET(req) {
   const user = await User.findOne({ email: session.user.email });
   if (!user) return NextResponse.json({ error: "User not found" }, { status: 404 });
 
+  // Return all relevant user fields for Rewards/Leaderboard/Settings consistency
   return NextResponse.json({
     name: user.name,
     email: user.email,
     theme: user.theme || "auto",
+    xp: user.xp ?? 0,
+    points: user.points ?? 0,
+    streak: user.streak ?? 0,
+    badges: user.badges ?? [],
+    avatar: user.avatar ?? null,
   });
 }
 
@@ -47,6 +53,11 @@ export async function PATCH(req) {
     name: user.name,
     email: user.email,
     theme: user.theme || "auto",
+    xp: user.xp ?? 0,
+    points: user.points ?? 0,
+    streak: user.streak ?? 0,
+    badges: user.badges ?? [],
+    avatar: user.avatar ?? null,
   });
 }
 

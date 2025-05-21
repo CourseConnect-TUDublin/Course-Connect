@@ -2,6 +2,7 @@
 import React, { useEffect, useState } from "react";
 import { Container, Card, Typography, List, ListItem, ListItemAvatar, Avatar, ListItemText } from "@mui/material";
 import EmojiEventsIcon from "@mui/icons-material/EmojiEvents";
+import { getLevelFromXP } from "@/utils/xpLevel";
 
 export default function LeaderboardPage() {
   const [leaders, setLeaders] = useState([]);
@@ -34,7 +35,7 @@ export default function LeaderboardPage() {
                 }
                 secondary={
                   <>
-                    Points: <b>{user.points}</b> | Level: {user.level}
+                    Points: <b>{user.points}</b> | Level: {getLevelFromXP(user.xp ?? 0)}
                   </>
                 }
               />

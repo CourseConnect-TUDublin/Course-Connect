@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import {
   Card,
   CardHeader,
@@ -21,6 +21,7 @@ import { toast } from "react-hot-toast";
 function getLevelFromXP(xp) {
   let level = 1;
   let xpRequired = 100;
+  let totalXP = xp;
 
   while (xp >= xpRequired) {
     xp -= xpRequired;
@@ -33,6 +34,7 @@ function getLevelFromXP(xp) {
     xpToNext: xpRequired,
     xpIntoLevel: xp,
     percent: Math.floor((xp / xpRequired) * 100),
+    totalXP,
   };
 }
 
@@ -46,6 +48,22 @@ export default function FocusPanel({ router }) {
   const [focusTime, setFocusTime] = useState(FOCUS_DURATION);
   const [running, setRunning] = useState(false);
   const [note, setNote] = useState("");
+  const [xp, setXP] = useState(user?.xp ?? 0); // local state for accurate XP
+
+  // Fetch actual latest XP on mount
+  const fetchUserXP = useCallback(async () => {
+    try {
+      const res = await fetch("/api/users/me");
+      const data = await res.json();
+      setXP(data?.xp ?? 0);
+    } catch {
+      setXP(0);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchUserXP();
+  }, [fetchUserXP]);
 
   // Load saved quick note
   useEffect(() => {
@@ -71,10 +89,9 @@ export default function FocusPanel({ router }) {
   const secs = String(focusTime % 60).padStart(2, "0");
 
   // XP & Level logic
-  const xp = user?.xp ?? 0;
   const { level, xpToNext, xpIntoLevel, percent } = getLevelFromXP(xp);
 
-  // Handle Focus End → award XP
+  // Handle Focus End → award XP and refetch latest XP
   const handleEndSession = async () => {
     setRunning(false);
     setFocusTime(FOCUS_DURATION);
@@ -90,6 +107,7 @@ export default function FocusPanel({ router }) {
 
       if (data.success) {
         toast.success(`+${FOCUS_XP_REWARD} XP earned!`);
+        await fetchUserXP(); // REFRESH XP
         router.push("/study-session/log");
       } else {
         toast.error("Failed to award XP");

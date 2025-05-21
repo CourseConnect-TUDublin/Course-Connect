@@ -1,57 +1,65 @@
 import { NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
-import { authOptions } from "../../auth/[...nextauth]/route";
-import dbConnect from "@/lib/dbConnect";
+import dbConnect from "@/utils/dbConnect";
 import User from "@/models/User";
-import XPLog from "@/models/XPLog";
+import { getServerSession } from "next-auth/next";
+import { authOptions } from "@/app/api/auth/[...nextauth]/options";
 
-export async function POST(req) {
-  const session = await getServerSession(authOptions);
-  if (!session) return NextResponse.json({ success: false, message: "Unauthenticated" });
-
+// Get user profile
+export async function GET(req) {
   await dbConnect();
+  const session = await getServerSession(authOptions);
+  if (!session?.user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-  const { amount } = await req.json();
-  const userId = session.user._id;
+  const user = await User.findOne({ email: session.user.email });
+  if (!user) return NextResponse.json({ error: "User not found" }, { status: 404 });
 
-  try {
-    const user = await User.findById(userId);
-
-    const oldXP = user.xp;
-    user.xp += amount;
-
-    // Handle level-up
-    const newLevel = calculateLevel(user.xp);
-    if (newLevel > user.level) {
-      user.level = newLevel;
-      // You can also update badges here
-    }
-
-    await user.save();
-
-    // Log the XP gain
-    await XPLog.create({
-      userId,
-      amount,
-      date: new Date(),
-      source: "focus-session",
-    });
-
-    return NextResponse.json({ success: true, xp: user.xp, level: user.level });
-  } catch (err) {
-    console.error("XP gain error:", err);
-    return NextResponse.json({ success: false, message: "Error updating XP" });
-  }
+  return NextResponse.json({
+    name: user.name,
+    email: user.email,
+    theme: user.theme || "auto",
+    xp: user.xp ?? 0,   // <-- ADDED
+  });
 }
 
-// Same logic used in frontend for level calc
-function calculateLevel(xp) {
-  let level = 1;
-  let xpRequired = 100;
-  while (xp >= xpRequired) {
-    xp -= xpRequired;
-    level++;
-    xpRequired = 100 + (level - 1) * 50;
+// Update user profile
+export async function PATCH(req) {
+  await dbConnect();
+  const session = await getServerSession(authOptions);
+  if (!session?.user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
+  const user = await User.findOne({ email: session.user.email });
+  if (!user) return NextResponse.json({ error: "User not found" }, { status: 404 });
+
+  const { name, email, theme } = await req.json();
+
+  // Prevent email change to a duplicate
+  if (email && email !== user.email) {
+    const emailExists = await User.findOne({ email });
+    if (emailExists) return NextResponse.json({ error: "Email already in use" }, { status: 409 });
   }
-  return level;
+
+  user.name = name ?? user.name;
+  user.email = email ?? user.email;
+  user.theme = theme ?? user.theme;
+
+  await user.save();
+
+  return NextResponse.json({
+    name: user.name,
+    email: user.email,
+    theme: user.theme || "auto",
+    xp: user.xp ?? 0,   
+  });
+}
+
+// Delete user account
+export async function DELETE(req) {
+  await dbConnect();
+  const session = await getServerSession(authOptions);
+  if (!session?.user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
+  await User.deleteOne({ email: session.user.email });
+  // Optionally: delete related user data (tasks, etc.)
+
+  return NextResponse.json({ ok: true });
 }
