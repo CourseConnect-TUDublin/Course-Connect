@@ -8,7 +8,7 @@ import {
 import { CalendarMonth, Add as AddIcon } from "@mui/icons-material";
 import { useSession } from "next-auth/react";
 
-// Helper for nice pastel event backgrounds
+// pastel event backgrounds
 const pastelColors = ["#ffe4ec", "#e6f0ff", "#e6ffe6", "#f5e6ff", "#fffbe6"];
 const days = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"];
 const slotTimes = [
