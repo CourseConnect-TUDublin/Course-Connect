@@ -14,7 +14,6 @@ import {
   Button,
   CircularProgress
 } from '@mui/material';
-import Chat from '../../../components/Chat';
 import { useSession } from 'next-auth/react';
 
 export default function SessionPage() {
