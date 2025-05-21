@@ -2,45 +2,50 @@
 
 import User from "@/models/User";
 
-// All action keys are UPPER_SNAKE_CASE for consistency.
-// Add new reward actions here as your app evolves!
+/**
+ * Reward actions mapping:
+ * - Value: { points, xp }
+ */
 export const REWARD_ACTIONS = {
-  COMPLETE_TASK:   { points: 10, xp: 10 },
-  JOIN_SESSION:    { points: 15, xp: 15 },
-  DAILY_LOGIN:     { points: 5,  xp: 5  },
-  HELP_PEER:       { points: 20, xp: 15 },
-  FINISH_WEEK:     { points: 50, xp: 50 },
-  FLASHCARD_FLIP:  { points: 3,  xp: 5  },
-  CREATE_FLASHCARD:{ points: 5,  xp: 5  }, // For flashcard creation reward
-  // Add more actions here!
+  COMPLETE_TASK:    { points: 10, xp: 10 },
+  JOIN_SESSION:     { points: 15, xp: 15 },
+  DAILY_LOGIN:      { points: 5,  xp: 5  },
+  HELP_PEER:        { points: 20, xp: 15 },
+  FINISH_WEEK:      { points: 50, xp: 50 },
+  FLASHCARD_FLIP:   { points: 3,  xp: 5  },
+  CREATE_FLASHCARD: { points: 5,  xp: 5  },
+  // Add more as needed
 };
 
-// Badges with clear conditions for unlocking
+/**
+ * Badge definitions:
+ * - Key: badge id
+ * - Value: { name, condition (user => boolean) }
+ */
 export const BADGES = {
   CONSISTENT:  { name: "Consistency Champ", condition: user => user.streak >= 7 },
   FIRST_TASK:  { name: "Getting Started",   condition: user => user.points >= 10 },
   LEVEL_5:     { name: "Level 5 Achiever",  condition: user => user.level >= 5   },
-  // Add more badges here!
+  // Add more badges here
 };
 
+// XP required for each level is LEVEL_UP_XP * current level
+const LEVEL_UP_XP = 100;
+
 /**
- * Awards points/xp and checks for badge unlocks.
- * Accepts `actionOrType` to support both new/legacy API clients.
- * Supports both UPPER_SNAKE_CASE and camelCase action names.
- *
- * @param {String} userId      - MongoDB user ObjectId
- * @param {String} actionOrType- Reward action type (e.g. "COMPLETE_TASK", "FLASHCARD_FLIP")
- * @param {String} [taskId]    - Optional: for task-based rewards
- * @returns {Promise<User>}    - Updated user object
+ * Award points and XP for a user action, update level and badges.
+ * @param {String} userId - MongoDB user ObjectId
+ * @param {String} actionOrType - Action type (e.g., "COMPLETE_TASK")
+ * @param {String} [taskId] -  for task-based rewards
+ * @returns {Promise<User>} - Updated user object
  */
 export async function awardPoints(userId, actionOrType, taskId = null) {
   const user = await User.findById(userId);
   if (!user) throw new Error("User not found");
 
-  // Normalize action key (support both API formats)
+  // Find action config
   let actionKey = (actionOrType || "").toUpperCase();
   if (!REWARD_ACTIONS[actionKey]) {
-    // Fallback for camelCase or legacy keys
     actionKey = Object.keys(REWARD_ACTIONS).find(
       key => key.toLowerCase() === (actionOrType || "").toLowerCase()
     );
@@ -48,30 +53,31 @@ export async function awardPoints(userId, actionOrType, taskId = null) {
   const reward = REWARD_ACTIONS[actionKey];
   if (!reward) throw new Error("Unknown reward action: " + actionOrType);
 
-  // Update login/activity streak
+  // Streak logic: increment if last activity was yesterday, reset if >1 day, set to 1 otherwise
   const now = new Date();
   if (user.lastActivity) {
     const daysDiff = Math.floor((now - user.lastActivity) / (1000 * 60 * 60 * 24));
-    user.streak = daysDiff === 1 ? user.streak + 1 : (daysDiff > 1 ? 1 : user.streak);
+    if (daysDiff === 1) user.streak += 1;
+    else if (daysDiff > 1) user.streak = 1;
+    // If same day, leave streak unchanged
   } else {
     user.streak = 1;
   }
   user.lastActivity = now;
 
-  // Add points and XP (default to 0 if missing)
+  // Update points, xp, level, badges
   user.points = (user.points || 0) + reward.points;
-  user.xp = (user.xp || 0) + reward.xp;
-  user.level = user.level || 1;
+  user.xp     = (user.xp     || 0) + reward.xp;
+  user.level  = user.level || 1;
   user.badges = user.badges || [];
 
-  // Level up: each level is harder (level * 100 XP)
-  const LEVEL_UP_XP = 100;
+  // Level-up logic: consume XP and increase level if threshold reached
   while (user.xp >= LEVEL_UP_XP * user.level) {
-    user.xp -= LEVEL_UP_XP * user.level;
+    user.xp   -= LEVEL_UP_XP * user.level;
     user.level += 1;
   }
 
-  // Badge unlocking
+  // Badge unlocking: add badge if condition met and not already earned
   for (const key in BADGES) {
     const badge = BADGES[key];
     if (badge.condition(user) && !user.badges.includes(badge.name)) {
@@ -84,9 +90,9 @@ export async function awardPoints(userId, actionOrType, taskId = null) {
 }
 
 /**
- * Get leaderboard (top users by points)
- * @param {Number} limit - Max users to return (default: 10)
- * @returns {Promise<Array>}
+ * Get top users sorted by points (leaderboard).
+ * @param {Number} limit - Number of users to return (default: 10)
+ * @returns {Promise<Array>} - List of top users
  */
 export async function getLeaderboard(limit = 10) {
   return await User.find()
