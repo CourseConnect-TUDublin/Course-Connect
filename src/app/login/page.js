@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { signIn } from "next-auth/react";
 import { useRouter } from "next/navigation";
-import { Container, TextField, Button, Typography, Paper, Box, Alert } from "@mui/material";
+import { Container, TextField, Button, Typography, Paper, Box, Alert, Link } from "@mui/material";
 
 export default function Login() {
   const [email, setEmail] = useState("");
@@ -65,6 +65,16 @@ export default function Login() {
           <Button type="submit" fullWidth variant="contained" sx={{ mt: 2 }}>
             Login
           </Button>
+        </Box>
+        
+        {/* Register link */}
+        <Box sx={{ mt: 2 }}>
+          <Typography variant="body2">
+            Don&apos;t have an account?{" "}
+            <Link href="/register" underline="hover" sx={{ fontWeight: 600 }}>
+              Register
+            </Link>
+          </Typography>
         </Box>
       </Paper>
     </Container>
