@@ -1,4 +1,3 @@
-// src/app/dashboard/SummaryCards.js
 "use client";
 
 import React, { useEffect, useState } from "react";
@@ -20,6 +19,7 @@ export default function SummaryCards({ router }) {
 
   const [metrics, setMetrics] = useState({
     tasksToday: 0,
+    tasksTodayList: [],
     focusStreak: 0,
     nextClass: "--",
   });
@@ -41,6 +41,7 @@ export default function SummaryCards({ router }) {
 
         setMetrics({
           tasksToday: tasks?.count ?? 0,
+          tasksTodayList: tasks?.tasks ?? [],
           focusStreak: streak?.days ?? 0,
           nextClass: nextClass?.time ?? "--",
         });
@@ -56,7 +57,31 @@ export default function SummaryCards({ router }) {
     {
       icon: Event,
       title: "Tasks Due Today",
-      value: metrics.tasksToday,
+      // Show count plus a preview list (up to 2 tasks), then “+N more” if needed
+      value: (
+        <div>
+          <strong>{metrics.tasksToday}</strong>
+          {metrics.tasksTodayList.length > 0 && (
+            <ul style={{ paddingLeft: 18, marginTop: 4, marginBottom: 0 }}>
+              {metrics.tasksTodayList.slice(0, 2).map((task, idx) => (
+                <li key={idx} style={{ fontSize: 13 }}>
+                  {task.title}
+                  {task.dueTime && (
+                    <span style={{ color: "#888", marginLeft: 6 }}>
+                      @{task.dueTime}
+                    </span>
+                  )}
+                </li>
+              ))}
+              {metrics.tasksTodayList.length > 2 && (
+                <li style={{ fontSize: 12, color: "#888" }}>
+                  +{metrics.tasksTodayList.length - 2} more…
+                </li>
+              )}
+            </ul>
+          )}
+        </div>
+      ),
       route: "/TaskManager",
       color: "#e3f2fd",
     },
