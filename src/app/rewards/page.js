@@ -1,23 +1,33 @@
 "use client";
-import React, { useEffect, useState } from "react";
-import { Card, CardContent, Typography, Box, Chip, CircularProgress, Grid } from "@mui/material";
+import useSWR from "swr";
+import { Card, CardContent, Typography, Box, Chip, CircularProgress, Grid, Button } from "@mui/material";
 import EmojiEventsIcon from "@mui/icons-material/EmojiEvents";
+import { getLevelFromXP } from "@/utils/xpLevel";
+
+// SWR fetcher
+const fetcher = (url) => fetch(url).then((res) => res.json());
 
 export default function RewardsPage() {
-  const [user, setUser] = useState(null);
-  const [loading, setLoading] = useState(true);
+  const { data: user, isLoading, mutate } = useSWR("/api/users/me", fetcher);
 
-  // Fetch current user's rewards info (adjust the API endpoint as needed)
-  useEffect(() => {
-    fetch("/api/users/me") // <-- Replace with your actual endpoint to get current user
-      .then((res) => res.json())
-      .then((data) => {
-        setUser(data.user);
-        setLoading(false);
-      });
-  }, []);
+  if (isLoading) {
+    return (
+      <Box sx={{ minHeight: "40vh", display: "flex", justifyContent: "center", alignItems: "center" }}>
+        <CircularProgress />
+      </Box>
+    );
+  }
 
-  if (loading) return <CircularProgress />;
+  if (!user) {
+    return (
+      <Box sx={{ textAlign: "center", mt: 8 }}>
+        <Typography color="error">Unable to load your rewards.</Typography>
+      </Box>
+    );
+  }
+
+  // Re-calculate level using the XP, if your XP-to-level formula is not stored directly
+  const level = getLevelFromXP(user.xp ?? 0);
 
   return (
     <Box sx={{ maxWidth: 500, mx: "auto", mt: 4 }}>
@@ -30,29 +40,29 @@ export default function RewardsPage() {
           <Grid container spacing={2}>
             <Grid item xs={6}>
               <Typography variant="body1">Level:</Typography>
-              <Typography variant="h6">{user.level}</Typography>
+              <Typography variant="h6">{level}</Typography>
             </Grid>
             <Grid item xs={6}>
               <Typography variant="body1">XP:</Typography>
-              <Typography variant="h6">{user.xp}</Typography>
+              <Typography variant="h6">{user.xp ?? 0}</Typography>
             </Grid>
             <Grid item xs={6}>
               <Typography variant="body1">Points:</Typography>
-              <Typography variant="h6">{user.points}</Typography>
+              <Typography variant="h6">{user.points ?? 0}</Typography>
             </Grid>
             <Grid item xs={6}>
               <Typography variant="body1">Current Streak:</Typography>
-              <Typography variant="h6">{user.streak} days</Typography>
+              <Typography variant="h6">{user.streak ?? 0} days</Typography>
             </Grid>
           </Grid>
           <Box mt={3}>
             <Typography variant="subtitle1" gutterBottom>
               Badges:
             </Typography>
-            {user.badges && user.badges.length > 0 ? (
-              user.badges.map((badge) => (
+            {Array.isArray(user.badges) && user.badges.length > 0 ? (
+              user.badges.map((badge, idx) => (
                 <Chip
-                  key={badge}
+                  key={badge + idx}
                   label={badge}
                   color="primary"
                   variant="outlined"
@@ -64,6 +74,10 @@ export default function RewardsPage() {
               <Typography variant="body2">No badges yet – complete tasks to earn some!</Typography>
             )}
           </Box>
+          {/* Manual Refresh for demo, but also can trigger after reward action */}
+          <Button variant="outlined" onClick={() => mutate()} sx={{ mt: 2 }}>
+            Refresh
+          </Button>
         </CardContent>
       </Card>
     </Box>

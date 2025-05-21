@@ -1,57 +1,54 @@
 import { NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
-import { authOptions } from "../../auth/[...nextauth]/route";
-import dbConnect from "@/lib/dbConnect";
+import dbConnect from "@/utils/dbConnect";
 import User from "@/models/User";
-import XPLog from "@/models/XPLog";
+import { getServerSession } from "next-auth/next";
+import { authOptions } from "@/app/api/auth/[...nextauth]/options";
 
-export async function POST(req) {
-  const session = await getServerSession(authOptions);
-  if (!session) return NextResponse.json({ success: false, message: "Unauthenticated" });
+// Level-up logic (if you want to handle automatic level increase)
+function getLevelInfo(xp) {
+  let level = 1;
+  let required = 100;
+  let remainingXP = xp;
 
-  await dbConnect();
-
-  const { amount } = await req.json();
-  const userId = session.user._id;
-
-  try {
-    const user = await User.findById(userId);
-
-    const oldXP = user.xp;
-    user.xp += amount;
-
-    // Handle level-up
-    const newLevel = calculateLevel(user.xp);
-    if (newLevel > user.level) {
-      user.level = newLevel;
-      // You can also update badges here
-    }
-
-    await user.save();
-
-    // Log the XP gain
-    await XPLog.create({
-      userId,
-      amount,
-      date: new Date(),
-      source: "focus-session",
-    });
-
-    return NextResponse.json({ success: true, xp: user.xp, level: user.level });
-  } catch (err) {
-    console.error("XP gain error:", err);
-    return NextResponse.json({ success: false, message: "Error updating XP" });
+  while (remainingXP >= required) {
+    remainingXP -= required;
+    level++;
+    required = 100 + (level - 1) * 50;
   }
+  return { level, xpIntoLevel: remainingXP, xpToNext: required };
 }
 
-// Same logic used in frontend for level calc
-function calculateLevel(xp) {
-  let level = 1;
-  let xpRequired = 100;
-  while (xp >= xpRequired) {
-    xp -= xpRequired;
-    level++;
-    xpRequired = 100 + (level - 1) * 50;
+export async function POST(req) {
+  await dbConnect();
+  const session = await getServerSession(authOptions);
+  if (!session?.user) {
+    return NextResponse.json({ success: false, error: "Unauthorized" }, { status: 401 });
   }
-  return level;
+
+  const { amount = 0, points = 0 } = await req.json();
+
+  if (!amount || typeof amount !== "number") {
+    return NextResponse.json({ success: false, error: "XP amount required" }, { status: 400 });
+  }
+
+  const user = await User.findOne({ email: session.user.email });
+  if (!user) {
+    return NextResponse.json({ success: false, error: "User not found" }, { status: 404 });
+  }
+
+  user.xp = (user.xp ?? 0) + amount;
+  user.points = (user.points ?? 0) + points;
+
+
+  const { level } = getLevelInfo(user.xp);
+  user.level = level;
+
+  await user.save();
+
+  return NextResponse.json({
+    success: true,
+    xp: user.xp,
+    points: user.points,
+    level: user.level,
+  });
 }

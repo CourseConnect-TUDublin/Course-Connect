@@ -45,6 +45,49 @@ export default function FlashcardsPage() {
       .finally(() => setLoading(false));
   }, []);
 
+  // --- Award XP/Points for flipping a flashcard ---
+  const awardXPOnFlip = async () => {
+    if (!session?.user?.id) return;
+    try {
+      const res = await fetch("/api/rewards", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          userId: session.user.id,
+          type: "FLASHCARD_FLIP", // match your rewards service
+        }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        toast(
+          <span>
+            <b>+5 XP!</b>
+            <br />
+            Flashcard reviewed
+          </span>,
+          {
+            icon: "💡",
+            style: { background: "#e1f7d5", color: "#222", fontWeight: 600 },
+            duration: 2500,
+          }
+        );
+        // Optionally, level up popup:
+        if (data.user?.levelUp) {
+          toast(
+            <span>
+              <b>🚀 Level Up!</b>
+              <br />
+              New level: {data.user.level}
+            </span>,
+            { icon: "🥇", duration: 3500 }
+          );
+        }
+      }
+    } catch {
+      // Silent fail
+    }
+  };
+
   // Add card
   const addCard = async () => {
     const q = newQuestion.trim();
@@ -71,7 +114,7 @@ export default function FlashcardsPage() {
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             userId: session.user.id,
-            type: "CREATE_FLASHCARD", // Match your rewards service key
+            type: "CREATE_FLASHCARD",
           }),
         });
         toast.success("🎉 Flashcard created! +5 XP!");
@@ -102,7 +145,14 @@ export default function FlashcardsPage() {
     setFlipped(false);
     setCurrentIndex((i) => (i - 1 + cards.length) % cards.length);
   };
-  const flipCard = () => setFlipped((f) => !f);
+
+  // Flip card and award XP
+  const flipCard = () => {
+    setFlipped((f) => !f);
+    if (!flipped) {
+      awardXPOnFlip(); // Only award on the initial flip to back
+    }
+  };
 
   const current = cards[currentIndex] || { question: "", answer: "" };
 
@@ -167,7 +217,7 @@ export default function FlashcardsPage() {
                     borderRadius: 3,
                     cursor: "pointer",
                     userSelect: "none",
-                    background: "#FFF176", // Solid yellow
+                    background: "#FFF176",
                   }}
                   onClick={flipCard}
                 >
@@ -199,7 +249,7 @@ export default function FlashcardsPage() {
                     borderRadius: 3,
                     cursor: "pointer",
                     userSelect: "none",
-                    background: "#FFF176", // Solid yellow
+                    background: "#FFF176",
                   }}
                   onClick={flipCard}
                 >

@@ -1,4 +1,3 @@
-// src/app/dashboard/SummaryCards.js
 "use client";
 
 import React, { useEffect, useState } from "react";
@@ -10,7 +9,7 @@ import {
   Typography,
   CardActionArea,
 } from "@mui/material";
-import { Event, Today, CheckCircle, MenuBook } from "@mui/icons-material";
+import { Event, Today, CheckCircle } from "@mui/icons-material";
 import { motion } from "framer-motion";
 import { useSession } from "next-auth/react";
 
@@ -20,6 +19,7 @@ export default function SummaryCards({ router }) {
 
   const [metrics, setMetrics] = useState({
     tasksToday: 0,
+    tasksTodayList: [],
     focusStreak: 0,
     nextClass: "--",
   });
@@ -41,6 +41,7 @@ export default function SummaryCards({ router }) {
 
         setMetrics({
           tasksToday: tasks?.count ?? 0,
+          tasksTodayList: tasks?.tasks ?? [],
           focusStreak: streak?.days ?? 0,
           nextClass: nextClass?.time ?? "--",
         });
@@ -56,7 +57,30 @@ export default function SummaryCards({ router }) {
     {
       icon: Event,
       title: "Tasks Due Today",
-      value: metrics.tasksToday,
+      value: (
+        <div>
+          <strong>{metrics.tasksToday}</strong>
+          {metrics.tasksTodayList.length > 0 && (
+            <ul style={{ paddingLeft: 18, marginTop: 4, marginBottom: 0 }}>
+              {metrics.tasksTodayList.slice(0, 2).map((task, idx) => (
+                <li key={idx} style={{ fontSize: 13 }}>
+                  {task.title}
+                  {task.dueTime && (
+                    <span style={{ color: "#888", marginLeft: 6 }}>
+                      @{task.dueTime}
+                    </span>
+                  )}
+                </li>
+              ))}
+              {metrics.tasksTodayList.length > 2 && (
+                <li style={{ fontSize: 12, color: "#888" }}>
+                  +{metrics.tasksTodayList.length - 2} more…
+                </li>
+              )}
+            </ul>
+          )}
+        </div>
+      ),
       route: "/TaskManager",
       color: "#e3f2fd",
     },
@@ -74,19 +98,13 @@ export default function SummaryCards({ router }) {
       route: "/timetable",
       color: "#fff9c4",
     },
-    {
-      icon: MenuBook,
-      title: "Study Hub",
-      value: "Explore",
-      route: "/studyhub",
-      color: "#ffe0b2",
-    },
+    // "Study Hub" card removed!
   ];
 
   return (
     <Grid container spacing={2} mb={4}>
       {cards.map((card, i) => (
-        <Grid item xs={6} sm={3} key={i}>
+        <Grid item xs={12} sm={4} key={i}>
           <CardActionArea onClick={() => router.push(card.route)}>
             <motion.div
               initial={{ opacity: 0, y: 30 }}
@@ -101,9 +119,14 @@ export default function SummaryCards({ router }) {
               <Card sx={{ borderRadius: 3, bgcolor: card.color }}>
                 <CardHeader avatar={<card.icon />} title={card.title} />
                 <CardContent>
-                  <Typography variant="h5" sx={{ fontWeight: 800 }}>
-                    {card.value}
-                  </Typography>
+                  {/* If value is a string, h5; if JSX (tasks), render directly */}
+                  {typeof card.value === "string" ? (
+                    <Typography variant="h5" sx={{ fontWeight: 800 }}>
+                      {card.value}
+                    </Typography>
+                  ) : (
+                    card.value
+                  )}
                 </CardContent>
               </Card>
             </motion.div>

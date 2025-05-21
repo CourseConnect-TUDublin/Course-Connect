@@ -14,6 +14,7 @@ import {
   List,
   ListItem,
   ListItemText,
+  ListItemButton,
   useMediaQuery,
 } from "@mui/material";
 import MenuIcon from "@mui/icons-material/Menu";
@@ -31,7 +32,7 @@ export default function Header({ toggleSidebar, drawerWidth }) {
   const isMobile = useMediaQuery(theme.breakpoints.down("md"));
 
   const [mobileOpen, setMobileOpen] = useState(false);
-  const handleDrawerToggle = () => setMobileOpen(!mobileOpen);
+  const handleDrawerToggle = () => setMobileOpen((open) => !open);
 
   const navItems = [
     { label: "Home", route: "/home" },
@@ -39,22 +40,42 @@ export default function Header({ toggleSidebar, drawerWidth }) {
     // Add more if needed
   ];
 
+  // Drawer content for mobile menu
   const drawerContent = (
     <Box sx={{ width: 240, p: 2 }}>
-      {navItems.map((item) => (
-        <ListItem
-          key={item.route}
-          button
-          component={Link}
-          href={item.route}
-          onClick={handleDrawerToggle}
-        >
-          <ListItemText primary={item.label} />
+      <List>
+        {navItems.map((item) => (
+          <ListItem key={item.route} disablePadding>
+            <ListItemButton
+              component={Link}
+              href={item.route}
+              selected={pathname === item.route}
+              onClick={handleDrawerToggle}
+            >
+              <ListItemText primary={item.label} />
+            </ListItemButton>
+          </ListItem>
+        ))}
+        {/* Profile link */}
+        <ListItem disablePadding>
+          <ListItemButton
+            component={Link}
+            href="/profile"
+            selected={pathname === "/profile"}
+            onClick={handleDrawerToggle}
+          >
+            <Avatar sx={{ width: 28, height: 28, mr: 1 }}>
+              {userName.charAt(0).toUpperCase()}
+            </Avatar>
+            <ListItemText primary="Profile" />
+          </ListItemButton>
         </ListItem>
-      ))}
-      <ListItem button onClick={() => signOut({ callbackUrl: "/login" })}>
-        <ListItemText primary="Sign Out" />
-      </ListItem>
+        <ListItem disablePadding>
+          <ListItemButton onClick={() => signOut({ callbackUrl: "/login" })}>
+            <ListItemText primary="Sign Out" />
+          </ListItemButton>
+        </ListItem>
+      </List>
     </Box>
   );
 
@@ -89,6 +110,7 @@ export default function Header({ toggleSidebar, drawerWidth }) {
                 color="inherit"
                 edge="start"
                 sx={{ mr: 2, display: { md: "none" } }}
+                aria-label="Open menu"
               >
                 <MenuIcon />
               </IconButton>
@@ -98,6 +120,7 @@ export default function Header({ toggleSidebar, drawerWidth }) {
             </Typography>
           </Box>
 
+          {/* Desktop navigation */}
           <Box
             sx={{
               display: { xs: "none", md: "flex" },
@@ -123,6 +146,7 @@ export default function Header({ toggleSidebar, drawerWidth }) {
 
             <NotificationsBell />
 
+            {/* Profile link */}
             <IconButton onClick={() => router.push("/profile")}>
               <Avatar sx={{ width: 32, height: 32 }}>
                 {userName.charAt(0).toUpperCase()}

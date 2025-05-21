@@ -1,11 +1,8 @@
-// src/app/home/layout.js
 import "../globals.css";
 import ClientProviders from "../../ClientProviders";
 import Header from "../../components/Header";
 import { CssBaseline, Box } from "@mui/material";
-
-// Only use <html> and <body> in the root layout.js (src/app/layout.js)
-// For nested layouts, return fragment or a single element.
+import { Toaster } from "react-hot-toast"; //  XP Toast support
 
 export const metadata = {
   title: "Course Connect - Home",
@@ -16,6 +13,20 @@ export default function HomeLayout({ children }) {
   return (
     <ClientProviders>
       <CssBaseline />
+      {/* XP Toast Popups */}
+      <Toaster
+        position="top-right"
+        toastOptions={{
+          style: {
+            fontWeight: 600,
+            fontSize: "1rem",
+            borderRadius: "10px",
+            background: "#f8fff4",
+            color: "#222",
+            boxShadow: "0 2px 32px #97ffa055",
+          },
+        }}
+      />
       {/* Consistent Header */}
       <Header />
 
@@ -23,11 +34,13 @@ export default function HomeLayout({ children }) {
       <Box
         component="main"
         sx={{
-          mt: 8,
-          px: { xs: 2, sm: 3 },
+          mt: { xs: 7.5, sm: 8 },
+          px: { xs: 1.5, sm: 3 },
           pb: 4,
           minHeight: "90vh",
           background: "#f9f9fa",
+          display: "flex",
+          flexDirection: "column",
         }}
       >
         {children}
