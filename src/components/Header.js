@@ -14,6 +14,7 @@ import {
   List,
   ListItem,
   ListItemText,
+  ListItemButton,
   useMediaQuery,
 } from "@mui/material";
 import MenuIcon from "@mui/icons-material/Menu";
@@ -39,22 +40,28 @@ export default function Header({ toggleSidebar, drawerWidth }) {
     // Add more if needed
   ];
 
+  // Drawer content with ListItemButton instead of ListItem button
   const drawerContent = (
     <Box sx={{ width: 240, p: 2 }}>
-      {navItems.map((item) => (
-        <ListItem
-          key={item.route}
-          button
-          component={Link}
-          href={item.route}
-          onClick={handleDrawerToggle}
-        >
-          <ListItemText primary={item.label} />
+      <List>
+        {navItems.map((item) => (
+          <ListItem key={item.route} disablePadding>
+            <ListItemButton
+              component={Link}
+              href={item.route}
+              onClick={handleDrawerToggle}
+              selected={pathname === item.route}
+            >
+              <ListItemText primary={item.label} />
+            </ListItemButton>
+          </ListItem>
+        ))}
+        <ListItem disablePadding>
+          <ListItemButton onClick={() => signOut({ callbackUrl: "/login" })}>
+            <ListItemText primary="Sign Out" />
+          </ListItemButton>
         </ListItem>
-      ))}
-      <ListItem button onClick={() => signOut({ callbackUrl: "/login" })}>
-        <ListItemText primary="Sign Out" />
-      </ListItem>
+      </List>
     </Box>
   );
 

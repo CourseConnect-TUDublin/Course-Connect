@@ -1,24 +1,16 @@
 "use client";
-import React, { useEffect, useState } from "react";
-import { Card, CardContent, Typography, Box, Chip, CircularProgress, Grid } from "@mui/material";
+import useSWR from "swr";
+import { Card, CardContent, Typography, Box, Chip, CircularProgress, Grid, Button } from "@mui/material";
 import EmojiEventsIcon from "@mui/icons-material/EmojiEvents";
 import { getLevelFromXP } from "@/utils/xpLevel";
 
+// SWR fetcher
+const fetcher = (url) => fetch(url).then((res) => res.json());
+
 export default function RewardsPage() {
-  const [user, setUser] = useState(null);
-  const [loading, setLoading] = useState(true);
+  const { data: user, isLoading, mutate } = useSWR("/api/users/me", fetcher);
 
-  useEffect(() => {
-    fetch("/api/users/me")
-      .then((res) => res.json())
-      .then((data) => {
-        setUser(data);
-        setLoading(false);
-      })
-      .catch(() => setLoading(false));
-  }, []);
-
-  if (loading) {
+  if (isLoading) {
     return (
       <Box sx={{ minHeight: "40vh", display: "flex", justifyContent: "center", alignItems: "center" }}>
         <CircularProgress />
@@ -34,6 +26,7 @@ export default function RewardsPage() {
     );
   }
 
+  // Re-calculate level using the XP, if your XP-to-level formula is not stored directly
   const level = getLevelFromXP(user.xp ?? 0);
 
   return (
@@ -81,6 +74,10 @@ export default function RewardsPage() {
               <Typography variant="body2">No badges yet – complete tasks to earn some!</Typography>
             )}
           </Box>
+          {/* Manual Refresh for demo, but also can trigger after reward action */}
+          <Button variant="outlined" onClick={() => mutate()} sx={{ mt: 2 }}>
+            Refresh
+          </Button>
         </CardContent>
       </Card>
     </Box>

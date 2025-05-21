@@ -43,7 +43,8 @@
     "react-hot-toast": "^2.5.2",
     "react-toastify": "^11.0.4",
     "recharts": "^2.15.1",
-    "rrule": "^2.8.1"
+    "rrule": "^2.8.1",
+    "swr": "^2.3.3"
   },
   "devDependencies": {
     "@babel/preset-react": "^7.26.3",

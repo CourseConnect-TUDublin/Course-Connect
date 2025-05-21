@@ -1,27 +1,16 @@
-import React, { useEffect, useState } from "react";
+import useSWR from "swr";
 import {
   Card, CardHeader, Divider, CardContent, Typography, List, ListItem, ListItemText, Chip, Box
 } from "@mui/material";
 import EmojiEventsIcon from "@mui/icons-material/EmojiEvents";
 
-export default function RewardsPanel() {
-  const [leaderboard, setLeaderboard] = useState([]);
-  const [loading, setLoading] = useState(true);
+// Fetcher function for SWR
+const fetcher = (url) => fetch(url).then((res) => res.json());
 
-  useEffect(() => {
-    async function fetchLeaderboard() {
-      setLoading(true);
-      try {
-        const res = await fetch("/api/rewards");
-        const data = await res.json();
-        if (data.leaderboard) setLeaderboard(data.leaderboard);
-      } catch (err) {
-        // fallback
-      }
-      setLoading(false);
-    }
-    fetchLeaderboard();
-  }, []);
+export default function RewardsPanel() {
+  // SWR for live leaderboard updates!
+  const { data, isLoading, error } = useSWR("/api/rewards", fetcher, { refreshInterval: 10000 }); // Refresh every 10s
+  const leaderboard = data?.leaderboard || [];
 
   return (
     <Card>
@@ -35,8 +24,10 @@ export default function RewardsPanel() {
         <Typography variant="body1" sx={{ fontWeight: 600, mb: 2 }}>
           Top Achievers
         </Typography>
-        {loading ? (
+        {isLoading ? (
           <Typography variant="body2" color="text.secondary">Loading…</Typography>
+        ) : error ? (
+          <Typography variant="body2" color="error">Failed to load leaderboard.</Typography>
         ) : (
           <List dense>
             {leaderboard.map((user, i) => (
