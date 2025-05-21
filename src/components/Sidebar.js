@@ -24,8 +24,6 @@ import {
   Help,
   Settings,
   Archive as ArchiveIcon,
-  ExpandLess,
-  ExpandMore,
 } from "@mui/icons-material";
 
 // Sidebar sections for clarity
@@ -44,16 +42,7 @@ const sidebarSections = [
       { label: "Timetable", route: "/timetable", icon: <CalendarToday /> },
       { label: "Flashcards", route: "/flashcards", icon: <Assignment /> },
       { label: "Focus Timer", route: "/FocusTimer", icon: <CheckBox /> },
-      { label: "Study Hub", route: "/studyhub", icon: <People /> },
-      {
-        label: "Study Tools",
-        icon: <People />,
-        subItems: [
-          { label: "Study Buddy", route: "/StudyBuddy" },
-          { label: "Chat Room", route: "/chatroom" },
-          { label: "Calendar", route: "/calendar" },
-        ],
-      },
+      // Study Hub and Study Tools (Study Buddy, Chat Room) removed
     ],
   },
   {
@@ -105,109 +94,40 @@ export default function Sidebar() {
           {section.items.map((item) => (
             <React.Fragment key={item.label}>
               <ListItem disablePadding>
-                {item.subItems ? (
-                  <ListItemButton
-                    onClick={() => setOpenMenu(openMenu === item.label ? null : item.label)}
-                    sx={{
-                      borderLeft: openMenu === item.label
-                        ? `4px solid ${theme.palette.primary.main}`
-                        : "4px solid transparent",
-                      bgcolor: openMenu === item.label ? `${theme.palette.primary.main}10` : "transparent",
-                      color: theme.palette.text.primary,
-                      fontWeight: 600,
-                      "&:hover": {
-                        bgcolor: `${theme.palette.primary.main}15`,
-                      },
-                      py: 1.1,
-                      pl: 2,
-                      pr: 1.5,
+                <ListItemButton
+                  onClick={() => router.push(item.route)}
+                  selected={isActive(item.route)}
+                  sx={{
+                    borderLeft: isActive(item.route)
+                      ? `4px solid ${theme.palette.primary.main}`
+                      : "4px solid transparent",
+                    bgcolor: isActive(item.route)
+                      ? `${theme.palette.primary.main}10`
+                      : "transparent",
+                    color: isActive(item.route)
+                      ? theme.palette.primary.main
+                      : theme.palette.text.primary,
+                    fontWeight: isActive(item.route) ? 700 : 500,
+                    py: 1.1,
+                    pl: 2,
+                    pr: 1.5,
+                    "&:hover": {
+                      bgcolor: `${theme.palette.primary.main}15`,
+                    },
+                  }}
+                >
+                  <ListItemIcon sx={{ minWidth: 36, color: theme.palette.primary.main }}>
+                    {item.icon}
+                  </ListItemIcon>
+                  <ListItemText
+                    primary={item.label}
+                    primaryTypographyProps={{
+                      fontWeight: isActive(item.route) ? 700 : 600,
+                      fontSize: 15,
                     }}
-                  >
-                    <ListItemIcon sx={{ minWidth: 36, color: theme.palette.primary.main }}>
-                      {item.icon}
-                    </ListItemIcon>
-                    <ListItemText
-                      primary={item.label}
-                      primaryTypographyProps={{
-                        fontWeight: 600,
-                        fontSize: 15,
-                      }}
-                    />
-                    {openMenu === item.label ? <ExpandLess /> : <ExpandMore />}
-                  </ListItemButton>
-                ) : (
-                  <ListItemButton
-                    onClick={() => router.push(item.route)}
-                    selected={isActive(item.route)}
-                    sx={{
-                      borderLeft: isActive(item.route)
-                        ? `4px solid ${theme.palette.primary.main}`
-                        : "4px solid transparent",
-                      bgcolor: isActive(item.route)
-                        ? `${theme.palette.primary.main}10`
-                        : "transparent",
-                      color: isActive(item.route)
-                        ? theme.palette.primary.main
-                        : theme.palette.text.primary,
-                      fontWeight: isActive(item.route) ? 700 : 500,
-                      py: 1.1,
-                      pl: 2,
-                      pr: 1.5,
-                      "&:hover": {
-                        bgcolor: `${theme.palette.primary.main}15`,
-                      },
-                    }}
-                  >
-                    <ListItemIcon sx={{ minWidth: 36, color: theme.palette.primary.main }}>
-                      {item.icon}
-                    </ListItemIcon>
-                    <ListItemText
-                      primary={item.label}
-                      primaryTypographyProps={{
-                        fontWeight: isActive(item.route) ? 700 : 600,
-                        fontSize: 15,
-                      }}
-                    />
-                  </ListItemButton>
-                )}
+                  />
+                </ListItemButton>
               </ListItem>
-              {/* Submenu */}
-              {item.subItems && (
-                <Collapse in={openMenu === item.label} timeout="auto" unmountOnExit>
-                  {item.subItems.map((subItem) => (
-                    <ListItemButton
-                      key={subItem.label}
-                      onClick={() => router.push(subItem.route)}
-                      selected={isActive(subItem.route)}
-                      sx={{
-                        pl: 6,
-                        py: 0.9,
-                        color: isActive(subItem.route)
-                          ? theme.palette.primary.main
-                          : theme.palette.text.secondary,
-                        fontWeight: isActive(subItem.route) ? 700 : 500,
-                        bgcolor: isActive(subItem.route)
-                          ? `${theme.palette.primary.main}10`
-                          : "transparent",
-                        borderLeft: isActive(subItem.route)
-                          ? `4px solid ${theme.palette.primary.main}`
-                          : "4px solid transparent",
-                        "&:hover": {
-                          bgcolor: `${theme.palette.primary.main}18`,
-                        },
-                      }}
-                    >
-                      <ListItemText
-                        primary={subItem.label}
-                        primaryTypographyProps={{
-                          fontWeight: isActive(subItem.route) ? 700 : 500,
-                          fontSize: 14,
-                        }}
-                      />
-                    </ListItemButton>
-                  ))}
-                </Collapse>
-              )}
             </React.Fragment>
           ))}
           {/* Divider after each section except last */}

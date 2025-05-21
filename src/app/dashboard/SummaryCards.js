@@ -9,7 +9,7 @@ import {
   Typography,
   CardActionArea,
 } from "@mui/material";
-import { Event, Today, CheckCircle, MenuBook } from "@mui/icons-material";
+import { Event, Today, CheckCircle } from "@mui/icons-material";
 import { motion } from "framer-motion";
 import { useSession } from "next-auth/react";
 
@@ -57,7 +57,6 @@ export default function SummaryCards({ router }) {
     {
       icon: Event,
       title: "Tasks Due Today",
-      // Show count plus a preview list (up to 2 tasks), then “+N more” if needed
       value: (
         <div>
           <strong>{metrics.tasksToday}</strong>
@@ -99,19 +98,13 @@ export default function SummaryCards({ router }) {
       route: "/timetable",
       color: "#fff9c4",
     },
-    {
-      icon: MenuBook,
-      title: "Study Hub",
-      value: "Explore",
-      route: "/studyhub",
-      color: "#ffe0b2",
-    },
+    // "Study Hub" card removed!
   ];
 
   return (
     <Grid container spacing={2} mb={4}>
       {cards.map((card, i) => (
-        <Grid item xs={6} sm={3} key={i}>
+        <Grid item xs={12} sm={4} key={i}>
           <CardActionArea onClick={() => router.push(card.route)}>
             <motion.div
               initial={{ opacity: 0, y: 30 }}
@@ -126,9 +119,14 @@ export default function SummaryCards({ router }) {
               <Card sx={{ borderRadius: 3, bgcolor: card.color }}>
                 <CardHeader avatar={<card.icon />} title={card.title} />
                 <CardContent>
-                  <Typography variant="h5" sx={{ fontWeight: 800 }}>
-                    {card.value}
-                  </Typography>
+                  {/* If value is a string, h5; if JSX (tasks), render directly */}
+                  {typeof card.value === "string" ? (
+                    <Typography variant="h5" sx={{ fontWeight: 800 }}>
+                      {card.value}
+                    </Typography>
+                  ) : (
+                    card.value
+                  )}
                 </CardContent>
               </Card>
             </motion.div>
