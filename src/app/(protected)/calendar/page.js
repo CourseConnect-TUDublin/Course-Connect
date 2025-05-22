@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useCallback } from "react";
 import { Container, Typography, CssBaseline, Box } from "@mui/material";
-import CalendarWidget from "../../components/CalendarWidget";
+import CalendarWidget from "../../../components/CalendarWidget";
 import { motion } from "framer-motion";
 import { useSession } from "next-auth/react";
 import { toast } from "react-toastify";
