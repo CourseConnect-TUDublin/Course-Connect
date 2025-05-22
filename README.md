@@ -1,4 +1,4 @@
-**Course Connect** is a full-stack, modular, and gamified web app for university students, designed to help you manage tasks, stay focused, and connect with study buddies. The platform uses XP, levels, badges, and leaderboards to keep users engaged and motivated.
+**Course Connect** is a full-stack, modular, and gamified web app for TU Dublin university students, designed to help you manage tasks, stay focused, and connect with study buddies. The platform uses XP, levels, badges, and leaderboards to keep users engaged and motivated.
 
 ---
 
@@ -80,14 +80,6 @@ Open issues for feature requests or bug reports.
 
 ---
 
-## 📃 License
-
-MIT License
-
----
-
 ## 📝 Credits
 
 Created by the Course Connect team as part of our 3rd year TU Dublin Major Group Project.
-
-
