@@ -54,20 +54,20 @@ Visit (https://course-connect-project-forkrepo-git-main-courseconnect.vercel.app
 
 All backend logic is in `/src/app/api/`.
 
-* `/api/tasks` — CRUD for tasks
-* `/api/flashcards` — CRUD for flashcards
-* `/api/rewards` — Handle XP/points and leaderboard
-* `/api/users` — User data
-* `/api/sessions` — Study sessions
-* `/api/login`, `/api/register` — Auth endpoints
+ `/api/tasks` — CRUD for tasks
+ `/api/flashcards` — CRUD for flashcards
+ `/api/rewards` — Handle XP/points and leaderboard
+ `/api/users` — User data
+ `/api/sessions` — Study sessions
+ `/api/login`, `/api/register` — Auth endpoints
 
 ---
 
 ## 🛡️ Security
 
-* **Passwords** are hashed using bcrypt before storing in the database.
-* **JWT sessions** are managed by NextAuth.js, protecting all sensitive routes.
-* **Protected routing:** Only authenticated users can access main app features.
+Passwords are hashed using bcrypt before storing in the database.
+JWT sessions are managed by NextAuth.js, protecting all sensitive routes.
+Protected routing: Only authenticated users can access main app features.
 
 ---
 
