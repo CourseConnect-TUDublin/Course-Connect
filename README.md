@@ -50,7 +50,7 @@ Visit (https://course-connect-project-forkrepo-git-main-courseconnect.vercel.app
 
 ---
 
-## 🗂️ API Overview
+ 🗂️ API Overview
 
 All backend logic is in `/src/app/api/`.
 
