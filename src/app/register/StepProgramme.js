@@ -2,7 +2,7 @@ import { Typography, Box, Button, CircularProgress, Paper } from "@mui/material"
 
 const options = [
   "Organise my study sessions",
-  "Collaborate with classmates",
+  "Track my progress",
   "Build better study habits "
 ];
 
