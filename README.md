@@ -1,10 +1,3 @@
-Absolutely! Here’s an **updated README.md** for your project, tailored to highlight all the core features, technologies, structure, and how to run it locally. This is ready to copy-paste and further customise as you wish.
-
----
-
-```markdown
-# Course Connect
-
 **Course Connect** is a full-stack, modular, and gamified web app for university students, designed to help you manage tasks, stay focused, and connect with study buddies. The platform uses XP, levels, badges, and leaderboards to keep users engaged and motivated.
 
 ---
