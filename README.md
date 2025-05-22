@@ -63,7 +63,7 @@ All backend logic is in `/src/app/api/`.
 
 ---
 
-## 🛡️ Security
+ 🛡️ Security
 
 Passwords are hashed using bcrypt before storing in the database.
 JWT sessions are managed by NextAuth.js, protecting all sensitive routes.
@@ -71,13 +71,13 @@ Protected routing: Only authenticated users can access main app features.
 
 ---
 
-## ✨ Contributing
+ ✨ Contributing
 
 PRs and suggestions welcome!
 Open issues for feature requests or bug reports.
 
 ---
 
-## 📝 Credits
+📝 Credits
 
 Created by the Course Connect team as part of our 3rd year TU Dublin Major Group Project.
