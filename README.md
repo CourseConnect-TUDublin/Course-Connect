@@ -3,14 +3,12 @@
 ---
 
 ## 🚀 Features
-
 - **Task Manager:** Kanban board with drag-and-drop, priorities, deadlines, and XP rewards for completing tasks.
 - **Focus Timer:** Custom Pomodoro-style timer with XP/points on completion and session history tracking.
 - **Flashcards:** Create, flip, and review flashcards; earn XP for each new card created or reviewed.
 - **Leaderboard:** See real-time rankings based on points and level.
 - **User Profile:** Track your XP, level, streak, badges, and stats. Edit your profile and avatar.
 - **Rewards & Badges:** Earn XP, points, and unlock badges for achievements and activity streaks.
-- **Study Sessions:** Find, join, or create group study sessions.
 - **Notifications:** Instant feedback with toast popups on XP, badges, and level-ups.
 - **Authentication:** Secure user authentication with NextAuth.js.
 
