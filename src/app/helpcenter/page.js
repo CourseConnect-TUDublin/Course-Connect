@@ -12,22 +12,16 @@ import {
   Card,
   CardContent,
   Button,
-  Link as MuiLink,
   Stack,
   IconButton,
-  Tooltip
+  Tooltip,
 } from "@mui/material";
 import {
   ExpandMore,
   HelpOutline,
   SupportAgent,
   Email,
-  InfoOutlined,
-  AssignmentTurnedIn,
-  People,
-  CalendarMonth
 } from "@mui/icons-material";
-import NextLink from "next/link";
 
 const faqs = [
   {
@@ -42,44 +36,9 @@ const faqs = [
     question: "Why am I not seeing my timetable?",
     answer: (
       <>
-        Make sure you have added your modules via the <MuiLink component={NextLink} href="/timetable" underline="hover">Timetable</MuiLink> page. If the problem persists, try refreshing or contact support.
+        Make sure you have added your modules via the Timetable page. If the problem persists, try refreshing or contact support.
       </>
     ),
-  },
-  {
-    question: "How can I connect with a study buddy?",
-    answer: (
-      <>
-        Use the <MuiLink component={NextLink} href="/studyhub" underline="hover">Study Hub</MuiLink> to find and join study groups or invite classmates to a session.
-      </>
-    ),
-  },
-];
-
-const guides = [
-  {
-    title: "Getting Started",
-    icon: <InfoOutlined />,
-    description: "Learn how to set up your account and navigate Course Connect.",
-    link: "/helpcenter/getting-started"
-  },
-  {
-    title: "Tasks & Productivity",
-    icon: <AssignmentTurnedIn />,
-    description: "Organise your assignments, deadlines, and daily tasks.",
-    link: "/helpcenter/tasks"
-  },
-  {
-    title: "Study Sessions",
-    icon: <People />,
-    description: "How to join, host, and benefit from collaborative study sessions.",
-    link: "/helpcenter/sessions"
-  },
-  {
-    title: "Timetable & Calendar",
-    icon: <CalendarMonth />,
-    description: "View, edit, and manage your timetable and important dates.",
-    link: "/helpcenter/timetable"
   },
 ];
 
@@ -100,7 +59,6 @@ const troubleshooting = [
 
 export default function HelpCenterPage() {
   const [expanded, setExpanded] = useState(false);
-
   const handleAccordion = (panel) => (event, isExpanded) => {
     setExpanded(isExpanded ? panel : false);
   };
@@ -115,35 +73,8 @@ export default function HelpCenterPage() {
       </Stack>
 
       <Typography variant="body1" sx={{ mb: 3 }}>
-        Welcome to the Course Connect Help Center. Browse guides, find answers to common questions, and get in touch with support.
+        Welcome to the Course Connect Help Center. Find answers to common questions and troubleshoot quickly.
       </Typography>
-
-      {/* Quick Guide Links */}
-      <Grid container spacing={2} sx={{ mb: 4 }}>
-        {guides.map((guide, i) => (
-          <Grid item xs={12} sm={6} md={3} key={i}>
-            <Card variant="outlined" sx={{ borderRadius: 3, height: "100%" }}>
-              <CardContent>
-                <Stack direction="row" alignItems="center" spacing={1} sx={{ mb: 1 }}>
-                  {guide.icon}
-                  <Typography fontWeight={600}>{guide.title}</Typography>
-                </Stack>
-                <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-                  {guide.description}
-                </Typography>
-                <MuiLink
-                  component={NextLink}
-                  href={guide.link}
-                  underline="hover"
-                  color="primary"
-                >
-                  Learn more
-                </MuiLink>
-              </CardContent>
-            </Card>
-          </Grid>
-        ))}
-      </Grid>
 
       {/* FAQ Section */}
       <Box sx={{ mb: 4 }}>
@@ -186,7 +117,7 @@ export default function HelpCenterPage() {
         ))}
       </Grid>
 
-      {/* Contact Support Section */}
+      {/* Contact Support */}
       <Box sx={{ mt: 4 }}>
         <Typography variant="h6" fontWeight={600} gutterBottom>
           Need more help?
